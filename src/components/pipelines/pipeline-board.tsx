@@ -102,7 +102,11 @@ export function PipelineBoard({
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
-      <div className="pipeline-scroll flex gap-3 overflow-x-auto pb-4">
+      {/* snap-x + snap-mandatory on mobile so swipes land the next
+          stage cleanly at the viewport edge instead of mid-column.
+          Disabled on lg+ because the full board fits without scroll
+          there and snapping would interfere with the natural layout. */}
+      <div className="pipeline-scroll flex snap-x snap-mandatory gap-3 overflow-x-auto pb-4 lg:snap-none">
         {sortedStages.map((stage) => {
           const stageDeals = dealsByStage.get(stage.id) ?? [];
           const totalValue = stageDeals.reduce(
@@ -176,7 +180,13 @@ function StageColumn({
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
 
   return (
-    <div className="flex min-w-[260px] flex-1 basis-[260px] flex-col rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+    // On mobile each column is `w-[85vw]` (with a reasonable min/max)
+    // so the next column's edge peeks in — a "there's more here" hint.
+    // snap-start lands each column cleanly when swiping. On lg+ we
+    // restore the flex-1 share-the-row behavior. The droppable ref is
+    // on the inner messages region below — intentionally NOT here, so
+    // a drag over the column header doesn't highlight the whole column.
+    <div className="flex w-[85vw] min-w-[260px] max-w-[320px] shrink-0 snap-start flex-col rounded-xl border border-slate-800 bg-slate-900/60 p-4 lg:w-auto lg:max-w-none lg:flex-1 lg:basis-[260px] lg:shrink lg:snap-none">
       {/* 3px colored top border — sits above the column's padding */}
       <div
         className="-mx-4 -mt-4 h-[3px] rounded-t-xl"
