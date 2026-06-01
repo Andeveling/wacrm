@@ -19,6 +19,11 @@ import type { PostgrestError } from "@supabase/supabase-js";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
 import { isAccountRole } from "@/lib/auth/roles";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 // Map known SQLSTATEs from the RPCs (see migration 018) onto HTTP
 // statuses. The `error.code` field is the SQLSTATE; the `message`
@@ -43,6 +48,13 @@ export async function PATCH(
 ) {
   try {
     const ctx = await requireRole("admin");
+
+    const limit = checkRateLimit(
+      `admin:memberRole:${ctx.userId}`,
+      RATE_LIMITS.adminAction,
+    );
+    if (!limit.success) return rateLimitResponse(limit);
+
     const { userId } = await params;
 
     const body = (await request.json().catch(() => null)) as
@@ -88,6 +100,13 @@ export async function DELETE(
 ) {
   try {
     const ctx = await requireRole("admin");
+
+    const limit = checkRateLimit(
+      `admin:memberRemove:${ctx.userId}`,
+      RATE_LIMITS.adminAction,
+    );
+    if (!limit.success) return rateLimitResponse(limit);
+
     const { userId } = await params;
 
     const { data, error } = await ctx.supabase.rpc("remove_account_member", {

@@ -18,6 +18,11 @@ import {
   getCurrentAccount,
   toErrorResponse,
 } from "@/lib/auth/account";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 export async function GET() {
   try {
@@ -36,6 +41,16 @@ const MAX_NAME_LEN = 80;
 export async function PATCH(request: Request) {
   try {
     const ctx = await requireRole("admin");
+
+    // Per-user limit on admin-class mutations. Bounds accidental
+    // abuse (script run in a loop) and a compromised admin session
+    // spamming renames. Each admin endpoint keys its own bucket so
+    // one route doesn't starve another.
+    const limit = checkRateLimit(
+      `admin:rename:${ctx.userId}`,
+      RATE_LIMITS.adminAction,
+    );
+    if (!limit.success) return rateLimitResponse(limit);
 
     const body = (await request.json().catch(() => null)) as
       | { name?: unknown }

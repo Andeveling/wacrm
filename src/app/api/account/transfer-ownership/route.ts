@@ -22,6 +22,11 @@ import { NextResponse } from "next/server";
 import type { PostgrestError } from "@supabase/supabase-js";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 function rpcErrorToResponse(err: PostgrestError): NextResponse {
   if (err.code === "42501") {
@@ -53,6 +58,16 @@ export async function POST(request: Request) {
     // this too, but failing fast here saves a Supabase round trip
     // on the obvious "admin trying to transfer" case.
     const ctx = await requireRole("owner");
+
+    // Rate-limit owner-only transfers. Legitimate use is one click
+    // every few months at most; a script run in a loop would
+    // produce a noisy audit trail. 30/min is well above any human
+    // pace and bounds the noise.
+    const limit = checkRateLimit(
+      `admin:transferOwnership:${ctx.userId}`,
+      RATE_LIMITS.adminAction,
+    );
+    if (!limit.success) return rateLimitResponse(limit);
 
     const body = (await request.json().catch(() => null)) as
       | { newOwnerUserId?: unknown }

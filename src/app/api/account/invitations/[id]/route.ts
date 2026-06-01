@@ -16,6 +16,11 @@
 import { NextResponse } from "next/server";
 
 import { requireRole, toErrorResponse } from "@/lib/auth/account";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 export async function DELETE(
   _request: Request,
@@ -23,6 +28,13 @@ export async function DELETE(
 ) {
   try {
     const ctx = await requireRole("admin");
+
+    const limit = checkRateLimit(
+      `admin:inviteRevoke:${ctx.userId}`,
+      RATE_LIMITS.adminAction,
+    );
+    if (!limit.success) return rateLimitResponse(limit);
+
     const { id } = await params;
 
     // No `eq('account_id', ctx.accountId)` — the RLS policy

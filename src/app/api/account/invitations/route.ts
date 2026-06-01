@@ -27,6 +27,11 @@ import {
   inviteUrl,
 } from "@/lib/auth/invitations";
 import { isAccountRole } from "@/lib/auth/roles";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  RATE_LIMITS,
+} from "@/lib/rate-limit";
 
 // Resolve the base URL we publish invite links under.
 //
@@ -114,6 +119,16 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const ctx = await requireRole("admin");
+
+    // 30/min per user. The Members tab is a clicks-only UI so any
+    // legitimate admin is far below this; the cap exists to keep
+    // a script run in a loop or a compromised admin session from
+    // flooding `account_invitations` with rows.
+    const limit = checkRateLimit(
+      `admin:inviteCreate:${ctx.userId}`,
+      RATE_LIMITS.adminAction,
+    );
+    if (!limit.success) return rateLimitResponse(limit);
 
     const body = (await request.json().catch(() => null)) as
       | { role?: unknown; expiresInDays?: unknown; label?: unknown }
