@@ -7,6 +7,7 @@ import {
   type InteractiveListSection,
   type MediaKind,
 } from '@/lib/whatsapp/meta-api'
+import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import {
   sanitizePhoneForMeta,
@@ -413,12 +414,33 @@ async function sendInteractiveViaMeta(
   //
   // We do NOT set interactive_reply_id here — that column is reserved
   // for the customer's tap on this message, populated by the webhook
-  // when their reply arrives.
+  // when their reply arrives. We DO persist the structured payload so
+  // the inbox thread re-renders the buttons/rows the bot sent (round-
+  // trip), matching the composer + automation send paths.
+  const interactivePayload: InteractiveMessagePayload =
+    input.kind === 'buttons'
+      ? {
+          kind: 'buttons',
+          body: input.bodyText,
+          header: input.headerText,
+          footer: input.footerText,
+          buttons: input.buttons,
+        }
+      : {
+          kind: 'list',
+          body: input.bodyText,
+          header: input.headerText,
+          footer: input.footerText,
+          button_label: input.buttonLabel,
+          sections: input.sections,
+        }
+
   const { error: msgErr } = await db.from('messages').insert({
     conversation_id: input.conversationId,
     sender_type: 'bot',
     content_type: 'interactive',
     content_text: input.bodyText,
+    interactive_payload: interactivePayload,
     message_id: waMessageId,
     status: 'sent',
   })

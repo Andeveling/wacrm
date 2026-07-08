@@ -75,6 +75,7 @@ export async function POST(request: Request) {
       template_language,
       template_params,
       template_message_params,
+      interactive_payload,
       reply_to_message_id,
     } = body
 
@@ -97,6 +98,7 @@ export async function POST(request: Request) {
         contentText: content_text,
         mediaUrl: media_url,
         templateName: template_name,
+        interactivePayload: interactive_payload,
       })
     } catch (err) {
       if (err instanceof SendMessageError) {
@@ -180,6 +182,7 @@ export async function POST(request: Request) {
         templateLanguage: template_language,
         templateParams: template_params,
         templateMessageParams: template_message_params,
+        interactivePayload: interactive_payload,
         replyToMessageId: reply_to_message_id,
       })
 

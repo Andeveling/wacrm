@@ -759,11 +759,19 @@ async function processMessage(
     | 'first_inbound_message'
     | 'new_message_received'
     | 'keyword_match'
+    | 'interactive_reply'
   )[] = []
   // Content-level triggers are suppressed when a flow consumed the
   // message — see the comment block above.
   if (!flowConsumed) {
     automationTriggers.push('new_message_received', 'keyword_match')
+    // Interactive tap → fire the interactive_reply trigger too (only
+    // meaningful when a button/list reply actually arrived). Enables
+    // automation-only chained menus; when a Flow owns the menu it will
+    // have consumed the reply and this is skipped.
+    if (interactiveReplyId) {
+      automationTriggers.push('interactive_reply')
+    }
   }
   // new_contact_created fires only when the webhook just auto-created the
   // contact row. first_inbound_message fires whenever this is the contact's
@@ -781,6 +789,9 @@ async function processMessage(
       context: {
         message_text: inboundText,
         conversation_id: conversation.id,
+        // Only set on interactive taps; drives the interactive_reply
+        // trigger's exact-id match.
+        interactive_reply_id: interactiveReplyId ?? undefined,
       },
     }).catch((err) => console.error('[automations] dispatch failed:', err))
   }

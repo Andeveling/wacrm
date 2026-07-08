@@ -193,7 +193,16 @@
       "sendTemplate": "Send template",
       "draftWithAI": "Draft a reply with AI",
       "addCaption": "Add a caption…",
-      "removeAttachment": "Remove attachment"
+      "removeAttachment": "Remove attachment",
+      "moreActions": "More",
+      "interactiveMessage": "Interactive message",
+      "quickReplies": "Quick replies",
+      "quickRepliesEmpty": "No quick replies yet. Add some in Settings → Quick replies.",
+      "saveAsQuickReply": "Save as quick reply",
+      "send": "Send",
+      "quickReplyNamePrompt": "Name this quick reply:",
+      "quickReplySaved": "Saved as a quick reply.",
+      "quickReplySaveError": "Couldn't save the quick reply."
     },
     "bubble": {
       "photo": "Photo",
@@ -814,6 +823,8 @@
     "builder": {
       "steps": {
         "send_message": "Send Message",
+        "send_buttons": "Send Buttons",
+        "send_list": "Send List",
         "send_template": "Send Template",
         "add_tag": "Add Tag",
         "remove_tag": "Remove Tag",
@@ -838,6 +849,10 @@
           "label": "Keyword Match",
           "hint": "Message contains specific keyword(s)"
         },
+        "interactive_reply": {
+          "label": "Button / List Reply",
+          "hint": "Customer taps a button or list row whose id matches — chain menus across automations"
+        },
         "new_contact_created": {
           "label": "New Contact Created",
           "hint": "When a contact is auto-created from an incoming message"
@@ -859,6 +874,9 @@
       "triggerType": "Trigger type",
       "keywords": "Keywords",
       "keywordsHint": "Comma-separated list (e.g. hello, help, buy)",
+      "replyIds": "Reply IDs",
+      "replyIdsHint": "yes, no, more_info",
+      "replyIdsHelp": "Comma-separated button/list-row ids to match, exact. Use the same ids you set on a Send Buttons / Send List step.",
       "schedule": "Schedule",
       "scheduleHint": "Cron expression (e.g. 0 9 * * 1-5)",
       "active": "Active",

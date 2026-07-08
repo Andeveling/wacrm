@@ -18,6 +18,7 @@ import {
 import { format } from "date-fns";
 import { ReplyQuote } from "./reply-quote";
 import { MessageReactions } from "./message-reactions";
+import { InteractivePreview } from "@/components/interactive/interactive-preview";
 import { useTranslations } from "next-intl";
 
 interface MessageBubbleProps {
@@ -216,21 +217,35 @@ function MessageContent({ message, t }: { message: Message, t: ReturnType<typeof
       );
 
     case "interactive": {
-      // Customer tapped a reply button or list row on a message the bot
-      // sent. We show the tapped option's title (already in content_text,
-      // set by parseMessageContent in the webhook) with a small affordance
-      // so agents reading the inbox can tell at a glance that this is a
-      // tap rather than the customer typing the same words.
+      // Three cases share content_type='interactive':
+      //  - OUTBOUND with payload (composer / automation / Flow send after
+      //    migration 035): render the buttons/list as they appear on the phone.
+      //  - INBOUND tap (customer chose an option, sender_type='customer'):
+      //    no payload; show the tapped option's title with a reply affordance
+      //    so agents can tell it's a tap, not the customer typing.
+      //  - OUTBOUND with NO payload (legacy bot/Flow sends from before
+      //    migration 035 backfilled the column): show the body text plainly —
+      //    it is our own message, NOT a customer tap.
+      if (message.interactive_payload) {
+        return <InteractivePreview payload={message.interactive_payload} />;
+      }
+      if (message.sender_type === "customer") {
+        return (
+          <div className="flex flex-col gap-0.5">
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+              <CornerDownLeft className="h-3 w-3" />
+              {t("buttonReply")}
+            </span>
+            <p className="whitespace-pre-wrap break-words text-sm">
+              {message.content_text || t("interactiveReply")}
+            </p>
+          </div>
+        );
+      }
       return (
-        <div className="flex flex-col gap-0.5">
-          <span className="inline-flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            <CornerDownLeft className="h-3 w-3" />
-            {t("buttonReply")}
-          </span>
-          <p className="whitespace-pre-wrap break-words text-sm">
-            {message.content_text || t("interactiveReply")}
-          </p>
-        </div>
+        <p className="whitespace-pre-wrap break-words text-sm">
+          {message.content_text || t("interactiveReply")}
+        </p>
       );
     }
 

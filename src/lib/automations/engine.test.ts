@@ -93,9 +93,11 @@ vi.mock("./admin-client", () => {
 vi.mock("./meta-send", () => ({
   engineSendText: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
   engineSendTemplate: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
+  engineSendInteractive: vi.fn(async () => ({ whatsapp_message_id: "m1" })),
 }));
 
-import { runAutomationsForTrigger } from "./engine";
+import { runAutomationsForTrigger, triggerMatches } from "./engine";
+import type { Automation } from "@/types";
 
 const ACCOUNT = "acct-1";
 
@@ -294,3 +296,43 @@ function customStep(field: string, value: string) {
     step_config: { field, value },
   };
 }
+
+describe("triggerMatches — interactive_reply", () => {
+  function automation(reply_ids: string[]): Automation {
+    return {
+      id: "a1",
+      account_id: ACCOUNT,
+      user_id: "u1",
+      name: "menu step",
+      trigger_type: "interactive_reply",
+      trigger_config: { reply_ids },
+      is_active: true,
+      execution_count: 0,
+      created_at: "",
+      updated_at: "",
+    };
+  }
+
+  it("matches when the tapped id is in reply_ids (exact)", () => {
+    expect(
+      triggerMatches(automation(["yes", "no"]), { interactive_reply_id: "yes" }),
+    ).toBe(true);
+  });
+
+  it("does not match a different id", () => {
+    expect(
+      triggerMatches(automation(["yes"]), { interactive_reply_id: "maybe" }),
+    ).toBe(false);
+  });
+
+  it("does not match on a substring (exact only)", () => {
+    expect(
+      triggerMatches(automation(["yes"]), { interactive_reply_id: "yes_please" }),
+    ).toBe(false);
+  });
+
+  it("does not match when no reply id is present or config is empty", () => {
+    expect(triggerMatches(automation(["yes"]), {})).toBe(false);
+    expect(triggerMatches(automation([]), { interactive_reply_id: "yes" })).toBe(false);
+  });
+});
