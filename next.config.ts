@@ -64,6 +64,10 @@ const SECURITY_HEADERS = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  turbopack: {
+    root: __dirname,
+  },
+
   /**
    * Cross-origin dev access (Next.js 16).
    *
