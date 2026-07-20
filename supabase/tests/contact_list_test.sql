@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(16);
+SELECT plan(17);
 
 SELECT has_function(
   'public', 'list_contacts', ARRAY['text', 'uuid[]', 'text', 'integer'],
@@ -54,9 +54,10 @@ VALUES
 
 INSERT INTO contact_tags (contact_id, tag_id)
 VALUES
-  ('10000000-0000-0000-0000-000000000001', '10000000-0000-4000-8000-000000000001'),
-  ('10000000-0000-0000-0000-000000000002', '10000000-0000-4000-8000-000000000002'),
-  ('10000000-0000-0000-0000-000000000003', '10000000-0000-4000-8000-000000000001'),
+   ('10000000-0000-0000-0000-000000000001', '10000000-0000-4000-8000-000000000001'),
+   ('10000000-0000-0000-0000-000000000002', '10000000-0000-4000-8000-000000000002'),
+   ('10000000-0000-0000-0000-000000000003', '10000000-0000-4000-8000-000000000001'),
+   ('10000000-0000-0000-0000-000000000099', '10000000-0000-4000-8000-000000000001'),
   ('10000000-0000-0000-0000-000000000003', '10000000-0000-4000-8000-000000000002');
 
 SELECT set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
@@ -86,6 +87,14 @@ SELECT is(
   )),
   'Customers',
   'contacts include enriched tags'
+);
+SELECT is(
+  (SELECT total_count FROM filter_contacts_by_tags(
+    ARRAY['10000000-0000-4000-8000-000000000001'::UUID],
+    p_status => 'archived'
+  )),
+  1::BIGINT,
+  'tag filtering can list archived contacts'
 );
 SELECT is((SELECT total_count FROM list_contacts(p_search => 'Outsider secret')), 0::BIGINT, 'RLS hides another account');
 SELECT is(jsonb_array_length((SELECT items FROM list_contacts(p_search => 'missing'))), 0, 'empty pages return an empty item array');
