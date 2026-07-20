@@ -87,6 +87,7 @@ REVOKE ALL ON FUNCTION public.restore_contact(UUID, UUID) FROM PUBLIC, authentic
 GRANT EXECUTE ON FUNCTION public.restore_contact(UUID, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION public.archive_contact(UUID) TO authenticated;
 
+-- Keep the four-argument function for legacy callers until they migrate to status-aware lists.
 CREATE OR REPLACE FUNCTION public.filter_contacts_by_tags(
   p_tag_ids UUID[],
   p_search TEXT DEFAULT NULL,
