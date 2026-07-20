@@ -301,6 +301,8 @@
       "selectedCount": "{count} selected",
       "clearSelection": "Clear",
       "deleteSelected": "Delete selected",
+      "archiveSelected": "Archive selected",
+      "restoreSelected": "Restore selected",
       "tableColumns": {
         "name": "Name",
         "phone": "Phone",
@@ -316,6 +318,9 @@
       "unnamed": "Unnamed",
       "editAction": "Edit",
       "deleteAction": "Delete",
+      "archiveAction": "Archive",
+      "restoreAction": "Restore",
+      "undo": "Undo",
       "showingPagination": "Showing {start}-{end} of {total}",
       "pageCount": "Page {page} of {total}",
       "deleteContactTitle": "Delete Contact",
@@ -328,7 +333,10 @@
       "toastFailedDelete": "Failed to delete contact",
       "toastDeleted": "Contact deleted",
       "toastBulkFailedDelete": "Failed to delete contacts",
-      "toastBulkDeleted": "{count} contacts deleted"
+      "toastBulkDeleted": "{count} contacts deleted",
+      "toastArchived": "{count} contacts archived",
+      "toastRestored": "{count} contacts restored",
+      "toastLifecycleFailed": "Could not update contacts"
     },
     "form": {
       "addTitle": "Add Contact",

@@ -20,16 +20,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import {
   Popover,
   PopoverContent,
@@ -41,7 +32,8 @@ import {
   Upload,
   MoreHorizontal,
   Pencil,
-  Trash2,
+  Archive,
+  RotateCcw,
   Loader2,
   Users,
   ChevronLeft,
@@ -57,6 +49,7 @@ import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager
 import { useCan } from '@/hooks/use-can';
 import { GatedButton } from '@/components/ui/gated-button';
 import { useTranslations } from 'next-intl';
+import { updateContactLifecycle } from './actions';
 
 const PAGE_SIZE = 25;
 
@@ -75,6 +68,7 @@ export default function ContactsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
+  const [status, setStatus] = useState<'active' | 'archived'>('active');
   // Tag filter — contacts shown must have ANY of these tags (OR).
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
@@ -86,13 +80,9 @@ export default function ContactsPage() {
   const [detailContactId, setDetailContactId] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [customFieldsOpen, setCustomFieldsOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   // Bulk selection (page-scoped — only the loaded rows are selectable)
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
   // All tags for display
   const [tagsMap, setTagsMap] = useState<Record<string, Tag>>({});
@@ -143,6 +133,7 @@ export default function ContactsPage() {
         p_search: term || null,
         p_limit: PAGE_SIZE,
         p_offset: from,
+        p_status: status,
       });
       if (seq !== fetchSeq.current) return; // superseded by a newer fetch
       if (error) {
@@ -159,6 +150,10 @@ export default function ContactsPage() {
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to);
+
+      query = status === 'active'
+        ? query.is('archived_at', null)
+        : query.not('archived_at', 'is', null);
 
       if (term) {
         const like = `%${term}%`;
@@ -207,7 +202,7 @@ export default function ContactsPage() {
 
     setContacts(enriched);
     setLoading(false);
-  }, [supabase, page, search, selectedTagIds, tagsMap, t]);
+  }, [supabase, page, search, selectedTagIds, tagsMap, t, status]);
 
   // Load-once-on-mount-ish data fetches. Each setter inside runs
   // inside an async promise completion (Supabase await), not
@@ -244,32 +239,6 @@ export default function ContactsPage() {
     setDetailOpen(true);
   }
 
-  function confirmDelete(contact: Contact) {
-    setDeleteTarget(contact);
-    setDeleteConfirmOpen(true);
-  }
-
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    setDeleting(true);
-
-    const { error } = await supabase
-      .from('contacts')
-      .delete()
-      .eq('id', deleteTarget.id);
-
-    if (error) {
-      toast.error(t('toastFailedDelete'));
-    } else {
-      toast.success(t('toastDeleted'));
-      fetchContacts();
-    }
-
-    setDeleting(false);
-    setDeleteConfirmOpen(false);
-    setDeleteTarget(null);
-  }
-
   const allOnPageSelected =
     contacts.length > 0 && contacts.every((c) => selected.has(c.id));
   const someOnPageSelected = contacts.some((c) => selected.has(c.id));
@@ -295,23 +264,46 @@ export default function ContactsPage() {
     });
   }
 
-  async function handleBulkDelete() {
-    const ids = [...selected];
-    if (ids.length === 0) return;
-    setDeleting(true);
+  async function updateLifecycle(action: 'archive' | 'restore', ids: string[]) {
+    const visibleIds = new Set(contacts.map((contact) => contact.id));
+    const targetIds = ids.filter((id) => visibleIds.has(id));
+    if (targetIds.length === 0) return;
 
-    const { error } = await supabase.from('contacts').delete().in('id', ids);
+    const removed = contacts.filter((contact) => targetIds.includes(contact.id));
+    setContacts((current) => current.filter((contact) => !targetIds.includes(contact.id)));
+    setSelected(new Set());
+    setTotalCount((count) => Math.max(0, count - targetIds.length));
 
-    if (error) {
-      toast.error(t('toastBulkFailedDelete'));
-    } else {
-      toast.success(t('toastBulkDeleted', { count: ids.length }));
-      setSelected(new Set());
-      fetchContacts();
+    const result = await updateContactLifecycle(action, targetIds);
+    if (!result.ok) {
+      setContacts((current) => [...removed, ...current].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      ));
+      setTotalCount((count) => count + targetIds.length);
+      toast.error(t('toastLifecycleFailed'));
+      return;
     }
 
-    setDeleting(false);
-    setBulkDeleteOpen(false);
+    if (action === 'archive') {
+      toast.success(t('toastArchived', { count: targetIds.length }), {
+        action: {
+          label: t('undo'),
+          onClick: async () => {
+            const restored = await updateContactLifecycle('restore', targetIds);
+            if (!restored.ok) {
+              toast.error(t('toastLifecycleFailed'));
+              return;
+            }
+            setContacts((current) => [...removed, ...current].sort(
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            ));
+            setTotalCount((count) => count + targetIds.length);
+          },
+        },
+      });
+    } else {
+      toast.success(t('toastRestored', { count: targetIds.length }));
+    }
   }
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
@@ -384,6 +376,21 @@ export default function ContactsPage() {
 
       {/* Search + tag filter */}
       <div className="space-y-2">
+        <div className="flex gap-2">
+          {(['active', 'archived'] as const).map((nextStatus) => (
+            <Button
+              key={nextStatus}
+              variant={status === nextStatus ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => {
+                setStatus(nextStatus);
+                setPage(0);
+              }}
+            >
+              {t(nextStatus)}
+            </Button>
+          ))}
+        </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative w-full max-w-sm">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -514,14 +521,14 @@ export default function ContactsPage() {
               {t('clearSelection')}
             </Button>
             <GatedButton
-              variant="destructive"
+              variant={status === 'active' ? 'destructive' : 'outline'}
               size="sm"
               canAct={canEdit}
-              gateReason="delete contacts"
-              onClick={() => setBulkDeleteOpen(true)}
+              gateReason={`${status} contacts`}
+              onClick={() => updateLifecycle(status === 'active' ? 'archive' : 'restore', [...selected])}
             >
-              <Trash2 className="size-4" />
-              {t('deleteSelected')}
+              {status === 'active' ? <Archive className="size-4" /> : <RotateCcw className="size-4" />}
+              {t(status === 'active' ? 'archiveSelected' : 'restoreSelected')}
             </GatedButton>
           </div>
         </div>
@@ -672,16 +679,14 @@ export default function ContactsPage() {
                           <Pencil className="size-4" />
                           {t('editAction')}
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border" />
                         <DropdownMenuItem
-                          variant="destructive"
                           onClick={(e) => {
                             e.stopPropagation();
-                            confirmDelete(contact);
+                            updateLifecycle(status === 'active' ? 'archive' : 'restore', [contact.id]);
                           }}
                         >
-                          <Trash2 className="size-4" />
-                          {t('deleteAction')}
+                          {status === 'active' ? <Archive className="size-4" /> : <RotateCcw className="size-4" />}
+                          {t(status === 'active' ? 'archiveAction' : 'restoreAction')}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -768,65 +773,6 @@ export default function ContactsPage() {
         />
       )}
 
-      {/* Delete Confirmation */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">{t('deleteContactTitle')}</DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {t('deleteContactDesc', { name: deleteTarget?.name || deleteTarget?.phone || '' })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="bg-popover border-border">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteConfirmOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t('cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
-              {deleting && <Loader2 className="size-4 animate-spin" />}
-              {t('deleteBtn')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk Delete Confirmation */}
-      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
-        <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-popover-foreground">
-              {t('deleteBulkTitle')}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {t('deleteBulkDesc', { count: selected.size })}
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="bg-popover border-border">
-            <Button
-              variant="outline"
-              onClick={() => setBulkDeleteOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
-              {t('cancel')}
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-              disabled={deleting}
-            >
-              {deleting && <Loader2 className="size-4 animate-spin" />}
-              {t('deleteBtn')}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

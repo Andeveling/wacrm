@@ -301,6 +301,8 @@
       "selectedCount": "{count}개 선택됨",
       "clearSelection": "지우기",
       "deleteSelected": "선택 항목 삭제",
+      "archiveSelected": "선택 항목 보관",
+      "restoreSelected": "선택 항목 복원",
       "tableColumns": {
         "name": "이름",
         "phone": "전화번호",
@@ -316,6 +318,9 @@
       "unnamed": "이름 없음",
       "editAction": "수정",
       "deleteAction": "삭제",
+      "archiveAction": "보관",
+      "restoreAction": "복원",
+      "undo": "실행 취소",
       "showingPagination": "전체 {total}개 중 {start}-{end}",
       "pageCount": "{total} 중 {page}페이지",
       "deleteContactTitle": "연락처 삭제",
@@ -328,7 +333,10 @@
       "toastFailedDelete": "연락처를 삭제하지 못했습니다",
       "toastDeleted": "연락처가 삭제되었습니다",
       "toastBulkFailedDelete": "연락처를 삭제하지 못했습니다",
-      "toastBulkDeleted": "연락처 {count}개가 삭제되었습니다"
+      "toastBulkDeleted": "연락처 {count}개가 삭제되었습니다",
+      "toastArchived": "연락처 {count}개를 보관했습니다",
+      "toastRestored": "연락처 {count}개를 복원했습니다",
+      "toastLifecycleFailed": "연락처를 업데이트하지 못했습니다"
     },
     "form": {
       "addTitle": "연락처 추가",

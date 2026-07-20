@@ -301,6 +301,8 @@
       "selectedCount": "{count} seleccionados",
       "clearSelection": "Limpiar",
       "deleteSelected": "Eliminar seleccionados",
+      "archiveSelected": "Archivar seleccionados",
+      "restoreSelected": "Restaurar seleccionados",
       "tableColumns": {
         "name": "Nombre",
         "phone": "Teléfono",
@@ -316,6 +318,9 @@
       "unnamed": "Sin nombre",
       "editAction": "Editar",
       "deleteAction": "Eliminar",
+      "archiveAction": "Archivar",
+      "restoreAction": "Restaurar",
+      "undo": "Deshacer",
       "showingPagination": "Mostrando {start}-{end} de {total}",
       "pageCount": "Página {page} de {total}",
       "deleteContactTitle": "Eliminar contacto",
@@ -328,7 +333,10 @@
       "toastFailedDelete": "Error al eliminar el contacto",
       "toastDeleted": "Contacto eliminado",
       "toastBulkFailedDelete": "Error al eliminar los contactos",
-      "toastBulkDeleted": "{count} contactos eliminados"
+      "toastBulkDeleted": "{count} contactos eliminados",
+      "toastArchived": "{count} contactos archivados",
+      "toastRestored": "{count} contactos restaurados",
+      "toastLifecycleFailed": "No se pudieron actualizar los contactos"
     },
     "form": {
       "addTitle": "Agregar contacto",

@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(64);
+SELECT plan(65);
 
 SELECT ok(
   EXISTS (
@@ -146,8 +146,8 @@ SELECT has_function('public', 'archive_contact', ARRAY['uuid'],
 SELECT has_function('public', 'restore_contact', ARRAY['uuid'],
   'restore operation is available as a database RPC');
 SELECT function_privs_are(
-  'public', 'archive_contact', ARRAY['uuid'], 'authenticated', ARRAY[]::TEXT[],
-  'archive remains disabled for authenticated users');
+  'public', 'archive_contact', ARRAY['uuid'], 'authenticated', ARRAY['EXECUTE'],
+  'authenticated users can call the role-protected archive operation');
 SELECT function_privs_are(
   'public', 'restore_contact', ARRAY['uuid'], 'authenticated', ARRAY['EXECUTE'],
   'authenticated users can call the role-protected restore operation');
@@ -351,6 +351,13 @@ SELECT ok((SELECT archived_at IS NULL FROM contacts WHERE id = '00000000-0000-00
 SELECT lives_ok(
   $$ SELECT public.archive_contact('00000000-0000-0000-0000-000000000201') $$,
   'a contact can be archived again for edit protection'
+);
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public' AND tablename = 'contacts' AND policyname = 'contacts_delete'
+  ),
+  'the contact delete policy is removed'
 );
 SELECT throws_ok(
   $$ UPDATE contacts SET name = 'Blocked edit' WHERE id = '00000000-0000-0000-0000-000000000201' $$,
