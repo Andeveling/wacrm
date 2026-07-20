@@ -82,8 +82,9 @@ export function isUniqueViolation(error: unknown): boolean {
  */
 export function dedupeByPhone<T extends { phone: string }>(
   rows: T[],
+  merge?: (first: T, duplicate: T) => T,
 ): { unique: T[]; duplicates: number } {
-  const seen = new Set<string>();
+  const seen = new Map<string, number>();
   const unique: T[] = [];
   let duplicates = 0;
 
@@ -93,11 +94,13 @@ export function dedupeByPhone<T extends { phone: string }>(
       duplicates++;
       continue;
     }
-    if (seen.has(key)) {
+    const firstIndex = seen.get(key);
+    if (firstIndex !== undefined) {
       duplicates++;
+      if (merge) unique[firstIndex] = merge(unique[firstIndex], row);
       continue;
     }
-    seen.add(key);
+    seen.set(key, unique.length);
     unique.push(row);
   }
 

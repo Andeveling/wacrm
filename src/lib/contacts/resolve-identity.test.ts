@@ -145,6 +145,23 @@ describe('resolveContactIdentity', () => {
     ]);
   });
 
+  it('adds incoming tags to an existing identity without changing its fields', async () => {
+    const existing = {
+      id: 'existing',
+      phone: '+14155550123',
+      archived_at: null,
+      name: 'Keep me',
+    };
+    const { db, tags, updates } = makeDb({ contacts: [existing] });
+
+    await expect(
+      resolveContactIdentity(db, { ...base, name: '', tagIds: ['tag-1'] })
+    ).resolves.toEqual({ status: 'existing', contact: existing });
+
+    expect(updates).toEqual([]);
+    expect(tags).toEqual([{ contact_id: 'existing', tag_id: 'tag-1' }]);
+  });
+
   it('re-resolves a uniqueness race and applies restoration policy', async () => {
     const archived = {
       id: 'winner',

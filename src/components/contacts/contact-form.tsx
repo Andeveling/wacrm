@@ -24,7 +24,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, AlertTriangle } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 
@@ -51,6 +50,7 @@ export function ContactForm({
   const supabase = createClient();
   const { accountId } = useAuth();
   const isEdit = !!contact;
+  const isArchived = !!contact?.archived_at;
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -125,6 +125,8 @@ export function ContactForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (isArchived) return;
 
     if (!phone.trim()) {
       toast.error(t('phoneRequired'));
@@ -233,6 +235,7 @@ export function ContactForm({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          <fieldset disabled={isArchived} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="cf-name" className="text-muted-foreground">
               {t('nameLabel')}
@@ -360,6 +363,7 @@ export function ContactForm({
             )}
           </div>
 
+          </fieldset>
           <DialogFooter className="bg-popover border-border">
             <Button
               type="button"
@@ -371,7 +375,7 @@ export function ContactForm({
             </Button>
             <Button
               type="submit"
-              disabled={saving || checkingDup || (!isEdit && !!dupMatch?.exact)}
+              disabled={isArchived || saving || checkingDup || (!isEdit && !!dupMatch?.exact)}
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {saving && <Loader2 className="size-4 animate-spin" />}

@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(62);
+SELECT plan(64);
 
 SELECT ok(
   EXISTS (
@@ -348,6 +348,14 @@ SELECT throws_ok(
 );
 SELECT ok((SELECT archived_at IS NULL FROM contacts WHERE id = '00000000-0000-0000-0000-000000000202'),
   'cross-account restore leaves the contact unchanged');
+SELECT lives_ok(
+  $$ SELECT public.archive_contact('00000000-0000-0000-0000-000000000201') $$,
+  'a contact can be archived again for edit protection'
+);
+SELECT throws_ok(
+  $$ UPDATE contacts SET name = 'Blocked edit' WHERE id = '00000000-0000-0000-0000-000000000201' $$,
+  '23514', 'Archived contacts are read-only', 'ordinary edits to archived contacts are rejected'
+);
 
 CREATE FUNCTION public.fail_contact_archive_test() RETURNS TRIGGER LANGUAGE plpgsql AS $$
 BEGIN

@@ -133,8 +133,9 @@ export function ImportModal({
   );
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{
-    imported: number;
-    skipped: number;
+    created: number;
+    existing: number;
+    restored: number;
     failed: number;
     tagsAssigned: number;
   } | null>(null);
@@ -211,13 +212,24 @@ export function ImportModal({
       if (!accountId)
         throw new Error('Your profile is not linked to an account.');
 
-      let imported = 0;
-      let skipped = 0;
+      let created = 0;
+      let existing = 0;
+      let restored = 0;
       let failed = 0;
 
-      // 1) De-dupe within the file by normalized phone (keep first).
-      const { unique, duplicates: inFileDupes } = dedupeByPhone(parsedRows);
-      skipped += inFileDupes;
+      // 1) De-dupe within the file by normalized phone, preserving the
+      // first non-empty fields and collecting every incoming tag.
+      const { unique, duplicates: inFileDupes } = dedupeByPhone(
+        parsedRows,
+        (first, duplicate) => ({
+          ...first,
+          name: first.name || duplicate.name,
+          email: first.email || duplicate.email,
+          company: first.company || duplicate.company,
+          tagNames: [...new Set([...first.tagNames, ...duplicate.tagNames])],
+        })
+      );
+      existing += inFileDupes;
 
       // 2) Resolve tag names → ids (admin+ may auto-create missing tags).
       //    Skip the round-trip when the import carries no tag names.
@@ -251,9 +263,10 @@ export function ImportModal({
             tagIds,
             intent: 'restore',
           });
-          if (identity?.status === 'existing') skipped++;
-          else if (identity) {
-            imported++;
+          if (identity) {
+            if (identity.status === 'created') created++;
+            else if (identity.status === 'restored') restored++;
+            else existing++;
             tagsAssigned += tagIds.length;
           }
         } catch {
@@ -261,9 +274,9 @@ export function ImportModal({
         }
       }
 
-      setResult({ imported, skipped, failed, tagsAssigned });
-      if (imported > 0) {
-        toast.success(t('toastImported', { count: imported }));
+      setResult({ created, existing, restored, failed, tagsAssigned });
+      if (created + restored > 0) {
+        toast.success(t('toastImported', { count: created + restored }));
         onImported();
       }
       if (tagsAssigned > 0) {
@@ -275,8 +288,8 @@ export function ImportModal({
           skippedNames.length > 3 ? ` (+${skippedNames.length - 3} more)` : '';
         toast.info(t('toastTagsSkipped', { sample, more }));
       }
-      if (skipped > 0) {
-        toast.info(t('toastSkipped', { count: skipped }));
+      if (existing > 0) {
+        toast.info(t('toastExisting', { count: existing }));
       }
       if (failed > 0) {
         toast.error(t('toastFailed', { count: failed }));
@@ -499,10 +512,16 @@ export function ImportModal({
                 {t('importComplete')}
               </p>
               <div className="mt-3 flex flex-wrap gap-3">
-                {result.imported > 0 && (
+                {result.created > 0 && (
                   <div className="text-primary flex items-center gap-1.5 text-sm">
                     <CheckCircle className="size-4 shrink-0" />
-                    {t('resultImported', { count: result.imported })}
+                    {t('resultCreated', { count: result.created })}
+                  </div>
+                )}
+                {result.restored > 0 && (
+                  <div className="text-primary flex items-center gap-1.5 text-sm">
+                    <CheckCircle className="size-4 shrink-0" />
+                    {t('resultRestored', { count: result.restored })}
                   </div>
                 )}
                 {result.tagsAssigned > 0 && (
@@ -511,10 +530,10 @@ export function ImportModal({
                     {t('resultTags', { count: result.tagsAssigned })}
                   </div>
                 )}
-                {result.skipped > 0 && (
+                {result.existing > 0 && (
                   <div className="flex items-center gap-1.5 text-sm text-amber-400">
                     <AlertTriangle className="size-4 shrink-0" />
-                    {t('resultSkipped', { count: result.skipped })}
+                    {t('resultExisting', { count: result.existing })}
                   </div>
                 )}
                 {result.failed > 0 && (

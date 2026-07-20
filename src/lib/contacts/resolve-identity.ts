@@ -59,7 +59,10 @@ export async function resolveContactIdentity(
     if (!data) return undefined;
 
     const contact = data as ContactIdentity;
-    if (!contact.archived_at) return { status: 'existing', contact };
+    if (!contact.archived_at) {
+      await addTags(db, contact.id, input.tagIds);
+      return { status: 'existing', contact };
+    }
     if (input.intent === 'outbound') return null;
 
     const fields = Object.fromEntries(

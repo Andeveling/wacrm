@@ -64,6 +64,22 @@ describe("dedupeByPhone", () => {
     expect(unique).toHaveLength(1);
     expect(duplicates).toBe(1);
   });
+
+  it("merges duplicate rows when given a merger", () => {
+    const { unique, duplicates } = dedupeByPhone(
+      [
+        { phone: "+1 555-1111", tags: ["VIP"] },
+        { phone: "15551111", tags: ["Lead"] },
+      ],
+      (first, duplicate) => ({
+        ...first,
+        tags: [...first.tags, ...duplicate.tags],
+      }),
+    );
+
+    expect(unique).toEqual([{ phone: "+1 555-1111", tags: ["VIP", "Lead"] }]);
+    expect(duplicates).toBe(1);
+  });
 });
 
 describe("findExistingContact", () => {

@@ -60,6 +60,7 @@ export function ContactDetailView({
   const { accountId, defaultCurrency } = useAuth();
 
   const [contact, setContact] = useState<Contact | null>(null);
+  const isArchived = !!contact?.archived_at;
   const [loading, setLoading] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
@@ -198,7 +199,7 @@ export function ContactDetailView({
   }
 
   async function saveDetails() {
-    if (!contactId || !editPhone.trim()) {
+    if (isArchived || !contactId || !editPhone.trim()) {
       toast.error(t('toastPhoneRequired'));
       return;
     }
@@ -226,7 +227,7 @@ export function ContactDetailView({
   }
 
   async function toggleTag(tagId: string) {
-    if (!contactId) return;
+    if (isArchived || !contactId) return;
     setSavingTags(true);
 
     const isSelected = contactTagIds.includes(tagId);
@@ -404,6 +405,11 @@ export function ContactDetailView({
                   <SheetDescription className="text-muted-foreground text-xs mt-0.5">
                     {t('contactDetailsDesc')}
                   </SheetDescription>
+                  {isArchived && (
+                    <Badge variant="outline" className="mt-1 text-muted-foreground">
+                      {t('archivedReadOnly')}
+                    </Badge>
+                  )}
                   <div className="flex flex-wrap items-center gap-3 mt-1.5 text-xs text-muted-foreground">
                     <button
                       onClick={copyPhone}
@@ -436,7 +442,7 @@ export function ContactDetailView({
                 <Button
                   size="sm"
                   onClick={() => setTemplatePickerOpen(true)}
-                  disabled={sendingTemplate}
+                  disabled={sendingTemplate || isArchived}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {sendingTemplate ? (
@@ -492,6 +498,7 @@ export function ContactDetailView({
                     <Input
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
+                      disabled={isArchived}
                       className="bg-muted border-border text-foreground h-8 text-sm"
                     />
                   </div>
@@ -502,6 +509,7 @@ export function ContactDetailView({
                     <Input
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
+                      disabled={isArchived}
                       className="bg-muted border-border text-foreground h-8 text-sm"
                     />
                   </div>
@@ -510,6 +518,7 @@ export function ContactDetailView({
                     <Input
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
+                      disabled={isArchived}
                       className="bg-muted border-border text-foreground h-8 text-sm"
                     />
                   </div>
@@ -518,12 +527,13 @@ export function ContactDetailView({
                     <Input
                       value={editCompany}
                       onChange={(e) => setEditCompany(e.target.value)}
+                      disabled={isArchived}
                       className="bg-muted border-border text-foreground h-8 text-sm"
                     />
                   </div>
                   <Button
                     onClick={saveDetails}
-                    disabled={savingDetails}
+                    disabled={isArchived || savingDetails}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
                     size="sm"
                   >
@@ -555,7 +565,7 @@ export function ContactDetailView({
                           <button
                             key={tag.id}
                             onClick={() => toggleTag(tag.id)}
-                            disabled={savingTags}
+                            disabled={isArchived || savingTags}
                             className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-all cursor-pointer ${
                               selected
                                 ? 'ring-2 ring-primary ring-offset-1 ring-offset-border'
@@ -582,12 +592,13 @@ export function ContactDetailView({
                   <Textarea
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
+                    disabled={isArchived}
                     placeholder={t('notesTab.placeholder')}
                     className="bg-muted border-border text-foreground placeholder:text-muted-foreground min-h-[60px] text-sm resize-none"
                   />
                   <Button
                     onClick={addNote}
-                    disabled={!newNote.trim() || savingNote}
+                    disabled={isArchived || !newNote.trim() || savingNote}
                     className="bg-primary hover:bg-primary/90 text-primary-foreground"
                     size="sm"
                   >
@@ -621,6 +632,7 @@ export function ContactDetailView({
                           </p>
                           <button
                             onClick={() => deleteNote(note.id)}
+                            disabled={isArchived}
                             className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-red-400 transition-all cursor-pointer shrink-0"
                           >
                             <Trash2 className="size-3.5" />
@@ -666,6 +678,7 @@ export function ContactDetailView({
                               [field.id]: e.target.value,
                             }))
                           }
+                          disabled={isArchived}
                           placeholder={t('enterCustomField', { name: field.field_name })}
                           className="bg-muted border-border text-foreground h-8 text-sm placeholder:text-muted-foreground"
                         />
@@ -673,7 +686,7 @@ export function ContactDetailView({
                     ))}
                     <Button
                       onClick={saveCustomFields}
-                      disabled={savingCustom}
+                      disabled={isArchived || savingCustom}
                       className="bg-primary hover:bg-primary/90 text-primary-foreground w-full"
                       size="sm"
                     >
