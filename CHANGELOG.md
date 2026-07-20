@@ -9,6 +9,17 @@ Versions follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 Pre-1.0, `MINOR` bumps cover new modules; `PATCH` bumps cover bug fixes
 and polish.
 
+## Unreleased
+
+### Changed
+
+- The public contact API now exposes contact archival: lists return active
+  contacts by default (or archived contacts with `?status=archived`), contacts
+  expose `archived_at`, `DELETE` archives, and `POST .../restore` restores.
+  These lifecycle operations require the existing `contacts:write` API-key
+  scope. This is backwards-compatible for default lists; there is no public
+  purge endpoint and contact history is never physically deleted.
+
 ## [0.8.1] — 2026-07-10
 
 Fixes inbound chats fragmenting into multiple threads for the same

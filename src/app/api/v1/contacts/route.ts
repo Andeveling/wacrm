@@ -39,6 +39,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const search = sanitizeSearch(url.searchParams.get('search') ?? '');
     const tag = url.searchParams.get('tag');
+    const status = url.searchParams.get('status');
 
     // When filtering by tag, add an aliased INNER join on contact_tags
     // used purely for the WHERE — the parent is kept only if it has the
@@ -52,8 +53,12 @@ export async function GET(request: Request) {
 
     let query = ctx.supabase
       .from('contacts')
-      .select(selectClause)
-      .eq('account_id', ctx.accountId);
+       .select(selectClause)
+       .eq('account_id', ctx.accountId);
+
+    query = status === 'archived'
+      ? query.not('archived_at', 'is', null)
+      : query.is('archived_at', null);
 
     if (search) {
       query = query.or(`name.ilike.*${search}*,phone.ilike.*${search}*`);

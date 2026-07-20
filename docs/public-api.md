@@ -46,7 +46,7 @@ it. Grant the minimum.
 | `messages:send`      | Send WhatsApp messages                   |
 | `messages:read`      | Read messages and delivery status        |
 | `contacts:read`      | List and read contacts                   |
-| `contacts:write`     | Create and update contacts               |
+| `contacts:write`     | Create, update, archive, and restore contacts |
 | `conversations:read` | List and read conversations              |
 | `broadcasts:send`    | Launch broadcast campaigns               |
 | `webhooks:manage`    | Register and manage outbound webhooks    |
@@ -166,9 +166,10 @@ send), `template_malformed` (500).
 
 ### `GET /api/v1/contacts`
 
-List contacts, newest first. Scope: `contacts:read`. Paginated (see
+List active contacts, newest first. Scope: `contacts:read`. Paginated (see
 [Pagination](#pagination)). Optional filters: `?search=` (matches name
-or phone) and `?tag=<tagId>`.
+or phone), `?tag=<tagId>`, and `?status=archived` to list archived contacts.
+Omitting `status` remains backwards-compatible and returns active contacts.
 
 ```json
 {
@@ -177,7 +178,7 @@ or phone) and `?tag=<tagId>`.
       "id": "…", "phone": "+14155550123", "name": "Jane Doe",
       "email": null, "company": "Acme", "avatar_url": null,
       "tags": [{ "id": "…", "name": "vip", "color": "#3b82f6" }],
-      "created_at": "…", "updated_at": "…"
+      "created_at": "…", "updated_at": "…", "archived_at": null
     }
   ],
   "meta": { "next_cursor": "…" }
@@ -198,7 +199,17 @@ list rows above).
 Read or update one contact. Scopes: `contacts:read` / `contacts:write`.
 `PATCH` updates only the fields you send (`name`, `email`, `company`);
 pass `tags` (an array of tag names) to replace the contact's tags. A
-contact in another account returns `404`.
+contact in another account returns `404`. Archived contacts include a non-null
+`archived_at` and are read-only: restore them before using `PATCH`.
+
+### `DELETE /api/v1/contacts/{id}` and `POST /api/v1/contacts/{id}/restore`
+
+Both require `contacts:write`, so lifecycle actions are enabled only for keys
+explicitly granted that scope. `DELETE` **archives** the contact; it never
+physically deletes contact, conversation, or message history. `POST .../restore`
+clears the archived state. Neither endpoint has a purge operation. Creating a
+contact with an archived phone also restores it, merging non-empty supplied
+fields and adding supplied tags.
 
 ### `GET /api/v1/conversations`
 

@@ -6,6 +6,7 @@
 // returns 404 (never 403 — don't reveal it exists elsewhere).
 // PATCH updates only the fields present in the body; pass `tags` (an
 // array of tag names) to replace the contact's tags.
+// DELETE archives; POST /restore restores. Both require contacts:write.
 // ============================================================
 
 import { requireApiKey } from '@/lib/auth/api-context';
@@ -51,6 +52,13 @@ export async function PATCH(
     // Verify the contact is in this account before mutating anything.
     const existing = await getContactById(ctx.supabase, ctx.accountId, id);
     if (!existing) return fail('not_found', 'Contact not found', 404);
+    if (existing.archived_at) {
+      return fail(
+        'contact_archived',
+        'Archived contacts must be restored before updating',
+        409
+      );
+    }
 
     // Build a partial update from the provided scalar fields. A field
     // is updated only when its key is PRESENT (so omitted fields are
@@ -97,6 +105,27 @@ export async function PATCH(
     if (err instanceof ContactError) {
       return fail(err.status === 400 ? 'bad_request' : 'internal', err.message, err.status);
     }
+    return toApiErrorResponse(err);
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const ctx = await requireApiKey(request, 'contacts:write');
+    const { id } = await params;
+    if (!(await getContactById(ctx.supabase, ctx.accountId, id))) {
+      return fail('not_found', 'Contact not found', 404);
+    }
+    const { error } = await ctx.supabase.rpc('archive_contact', {
+      p_contact_id: id,
+      p_account_id: ctx.accountId,
+    });
+    if (error) return fail('internal', 'Failed to archive contact', 500);
+    return ok({ id, archived: true });
+  } catch (err) {
     return toApiErrorResponse(err);
   }
 }

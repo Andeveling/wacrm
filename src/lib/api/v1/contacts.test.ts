@@ -18,6 +18,7 @@ describe('serializeContact', () => {
       avatar_url: null,
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-02T00:00:00Z',
+      archived_at: '2026-01-03T00:00:00Z',
       contact_tags: [
         { tags: { id: 't1', name: 'vip', color: '#fff' } },
         { tags: null }, // orphaned join — dropped
@@ -33,6 +34,7 @@ describe('serializeContact', () => {
       tags: [{ id: 't1', name: 'vip', color: '#fff' }],
       created_at: '2026-01-01T00:00:00Z',
       updated_at: '2026-01-02T00:00:00Z',
+      archived_at: '2026-01-03T00:00:00Z',
     });
   });
 
@@ -48,6 +50,7 @@ describe('serializeContact', () => {
       updated_at: 'b',
     };
     expect(serializeContact(row).tags).toEqual([]);
+    expect(serializeContact(row).archived_at).toBeNull();
   });
 });
 

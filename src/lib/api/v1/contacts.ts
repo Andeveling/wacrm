@@ -31,6 +31,7 @@ export interface ApiContact {
   tags: { id: string; name: string; color: string }[];
   created_at: string;
   updated_at: string;
+  archived_at: string | null;
 }
 
 /** Thrown by the helpers below; routes map `.status`/`.message`. */
@@ -61,6 +62,7 @@ export function serializeContact(row: Record<string, unknown>): ApiContact {
       .map((t) => ({ id: t.id, name: t.name, color: t.color })),
     created_at: row.created_at as string,
     updated_at: row.updated_at as string,
+    archived_at: (row.archived_at as string | null) ?? null,
   };
 }
 
