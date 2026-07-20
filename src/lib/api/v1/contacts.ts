@@ -9,10 +9,14 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
+import {
+  ContactIdentityError,
+  type ContactIdentityStatus,
+  resolveContactIdentity,
+} from '@/lib/contacts/resolve-identity';
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags';
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events';
-import { sanitizePhoneForMeta, isValidE164 } from '@/lib/whatsapp/phone-utils';
+import { isValidE164, sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
 
 /** Row select that embeds the contact's tags for serialization. */
 export const CONTACT_SELECT = '*, contact_tags(tags(*))';
@@ -112,7 +116,7 @@ export async function findOrCreateContact(
   accountId: string,
   auditUserId: string,
   input: ContactInput
-): Promise<{ id: string; created: boolean }> {
+): Promise<{ id: string; created: boolean; status: ContactIdentityStatus }> {
   const sanitized = sanitizePhoneForMeta(input.phone);
   if (!isValidE164(sanitized)) {
     throw new ContactError(
@@ -121,34 +125,26 @@ export async function findOrCreateContact(
     );
   }
 
-  const existing = await findExistingContact(db, accountId, sanitized);
-  if (existing) return { id: existing.id, created: false };
-
-  const { data: created, error } = await db
-    .from('contacts')
-    .insert({
-      account_id: accountId,
-      user_id: auditUserId,
+  try {
+    const result = await resolveContactIdentity(db, {
+      accountId,
+      auditUserId,
       phone: sanitized,
-      name: input.name ?? sanitized,
-      email: input.email ?? null,
-      company: input.company ?? null,
-    })
-    .select('id')
-    .single();
-
-  if (error || !created) {
-    // Lost a race against a concurrent create — the unique index
-    // rejected the duplicate. Re-resolve to the winner.
-    if (isUniqueViolation(error)) {
-      const raced = await findExistingContact(db, accountId, sanitized);
-      if (raced) return { id: raced.id, created: false };
-    }
+      intent: 'restore',
+      name: input.name,
+      email: input.email,
+      company: input.company,
+    });
+    if (!result) throw new ContactIdentityError('Failed to resolve contact');
+    return {
+      id: result.contact.id,
+      created: result.status === 'created',
+      status: result.status,
+    };
+  } catch (error) {
     console.error('[api/v1/contacts] create error:', error);
     throw new ContactError('Failed to create contact', 500);
   }
-
-  return { id: created.id, created: true };
 }
 
 /**
@@ -162,7 +158,8 @@ export async function setContactTags(
   accountId: string,
   auditUserId: string,
   contactId: string,
-  tagNames: string[]
+  tagNames: string[],
+  mode: 'replace' | 'add' = 'replace'
 ): Promise<void> {
   const { tagIdByKey } = await resolveImportTagIds(db, {
     accountId,
@@ -184,12 +181,11 @@ export async function setContactTags(
   if (readErr) {
     throw new ContactError('Failed to read contact tags', 500);
   }
-  const existing = new Set(
-    (current ?? []).map((r) => r.tag_id as string)
-  );
+  const existing = new Set((current ?? []).map((r) => r.tag_id as string));
 
   const toAdd = [...desired].filter((id) => !existing.has(id));
-  const toRemove = [...existing].filter((id) => !desired.has(id));
+  const toRemove =
+    mode === 'replace' ? [...existing].filter((id) => !desired.has(id)) : [];
 
   if (toRemove.length > 0) {
     const { error } = await db

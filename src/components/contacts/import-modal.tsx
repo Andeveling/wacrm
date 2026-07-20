@@ -1,43 +1,36 @@
 'use client';
 
+import {
+  AlertTriangle,
+  CheckCircle,
+  FileText,
+  Loader2,
+  Tag,
+  Upload,
+  XCircle,
+} from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useMemo, useRef, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
-import {
-  dedupeByPhone,
-  isUniqueViolation,
-  normalizeKey,
-} from '@/lib/contacts/dedupe';
-import {
-  parseContactCsv,
-  type ParsedContactRow,
-} from '@/lib/contacts/parse-contact-csv';
-import {
-  assignImportedContactTags,
-  resolveImportTagIds,
-  type ContactTagAssignment,
-} from '@/lib/contacts/resolve-import-tags';
-import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/use-auth';
+import { dedupeByPhone } from '@/lib/contacts/dedupe';
 import {
-  Upload,
-  FileText,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-  Tag,
-} from 'lucide-react';
-import { useTranslations } from 'next-intl';
+  type ParsedContactRow,
+  parseContactCsv,
+} from '@/lib/contacts/parse-contact-csv';
+import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
+import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 
 const DEFAULT_TAG_COLOR = '#3b82f6';
 const PREVIEW_LIMIT = 5;
@@ -226,31 +219,9 @@ export function ImportModal({
       const { unique, duplicates: inFileDupes } = dedupeByPhone(parsedRows);
       skipped += inFileDupes;
 
-      // 2) Skip numbers already in this account. One read of the
-      //    generated `phone_normalized` column (migration 022) → Set.
-      const { data: existingRows } = await supabase
-        .from('contacts')
-        .select('phone_normalized')
-        .eq('account_id', accountId);
-      const existing = new Set(
-        (existingRows ?? [])
-          .map(
-            (r) => (r as { phone_normalized: string | null }).phone_normalized
-          )
-          .filter((p): p is string => !!p)
-      );
-
-      const toInsert = unique.filter((row) => {
-        if (existing.has(normalizeKey(row.phone))) {
-          skipped++;
-          return false;
-        }
-        return true;
-      });
-
-      // 3) Resolve tag names → ids (admin+ may auto-create missing tags).
+      // 2) Resolve tag names → ids (admin+ may auto-create missing tags).
       //    Skip the round-trip when the import carries no tag names.
-      const allTagNames = toInsert.flatMap((row) => row.tagNames);
+      const allTagNames = unique.flatMap((row) => row.tagNames);
       let tagIdByKey = new Map<string, string>();
       let skippedNames: string[] = [];
       if (allTagNames.length > 0) {
@@ -262,83 +233,32 @@ export function ImportModal({
         }));
       }
 
-      const tagAssignments: ContactTagAssignment[] = [];
-
-      // 4) Batch insert the genuinely-new rows in chunks of 50. The DB
-      //    unique index is the backstop: a 23505 (race, or a format
-      //    that normalizes equal) counts as skipped, not failed.
-      const chunkSize = 50;
-
-      for (let i = 0; i < toInsert.length; i += chunkSize) {
-        const chunk = toInsert.slice(i, i + chunkSize);
-        const rows = chunk.map((row) => ({
-          user_id: user.id,
-          account_id: accountId,
-          phone: row.phone,
-          name: row.name || null,
-          email: row.email || null,
-          company: row.company || null,
-        }));
-
-        const { data, error } = await supabase
-          .from('contacts')
-          .insert(rows)
-          .select('id');
-
-        if (error) {
-          // Retry individually so one bad/duplicate row doesn't sink
-          // the whole chunk.
-          for (let j = 0; j < rows.length; j++) {
-            const row = rows[j];
-            const source = chunk[j];
-            const { data: singleData, error: singleErr } = await supabase
-              .from('contacts')
-              .insert(row)
-              .select('id')
-              .single();
-
-            if (!singleErr && singleData) {
-              imported++;
-              if (source.tagNames.length > 0) {
-                tagAssignments.push({
-                  contactId: singleData.id,
-                  tagNames: source.tagNames,
-                });
-              }
-            } else if (isUniqueViolation(singleErr)) {
-              skipped++;
-            } else {
-              failed++;
-            }
-          }
-        } else {
-          const inserted = data ?? [];
-          imported += inserted.length;
-          // inserted[j] ↔ chunk[j] only holds because a single INSERT
-          // preserves RETURNING order. If this path is ever split into
-          // parallel inserts, zip by phone or returned id instead.
-          for (let j = 0; j < inserted.length; j++) {
-            const source = chunk[j];
-            if (!source || source.tagNames.length === 0) continue;
-            tagAssignments.push({
-              contactId: inserted[j].id,
-              tagNames: source.tagNames,
-            });
-          }
-        }
-      }
-
-      // 5) Wire tags onto the contacts we just created. Failure here must
-      //    not mask a successful contact import.
+      // 3) Resolve every identity through the shared policy. Archived
+      //    matches are restored and merged; active matches are skipped.
       let tagsAssigned = 0;
-      try {
-        tagsAssigned = await assignImportedContactTags(
-          supabase,
-          tagAssignments,
-          tagIdByKey
-        );
-      } catch {
-        toast.warning(t('toastTagsWarning'));
+      for (const row of unique) {
+        try {
+          const tagIds = row.tagNames
+            .map((name) => tagIdByKey.get(name.trim().toLowerCase()))
+            .filter((id): id is string => Boolean(id));
+          const identity = await resolveContactIdentity(supabase, {
+            accountId,
+            auditUserId: user.id,
+            phone: row.phone,
+            name: row.name,
+            email: row.email,
+            company: row.company,
+            tagIds,
+            intent: 'restore',
+          });
+          if (identity?.status === 'existing') skipped++;
+          else if (identity) {
+            imported++;
+            tagsAssigned += tagIds.length;
+          }
+        } catch {
+          failed++;
+        }
       }
 
       setResult({ imported, skipped, failed, tagsAssigned });
@@ -398,15 +318,21 @@ export function ImportModal({
             <DialogTitle className="text-lg text-popover-foreground">
               {t('title')}
             </DialogTitle>
-            <DialogDescription className="leading-relaxed text-muted-foreground"
+            <DialogDescription
+              className="leading-relaxed text-muted-foreground"
               dangerouslySetInnerHTML={{
                 __html: t.markup('desc', {
-                  phoneCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
-                  nameCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
-                  emailCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
-                  companyCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
-                  tagsCode: (chunks) => `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
-                })
+                  phoneCode: (chunks) =>
+                    `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
+                  nameCode: (chunks) =>
+                    `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
+                  emailCode: (chunks) =>
+                    `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
+                  companyCode: (chunks) =>
+                    `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
+                  tagsCode: (chunks) =>
+                    `<code class="rounded bg-muted px-1 py-0.5 text-[11px] text-muted-foreground">${chunks}</code>`,
+                }),
               }}
             />
           </DialogHeader>
@@ -476,7 +402,10 @@ export function ImportModal({
                   {tagStats.rowsWithTags > 0 && (
                     <span className="inline-flex items-center gap-1 rounded-md bg-muted/90 px-2 py-0.5 text-[11px] text-muted-foreground">
                       <Tag className="text-primary/80 size-3" />
-                      {t('previewTags', { tags: tagStats.unique, contacts: tagStats.rowsWithTags })}
+                      {t('previewTags', {
+                        tags: tagStats.unique,
+                        contacts: tagStats.rowsWithTags,
+                      })}
                     </span>
                   )}
                 </div>
@@ -566,7 +495,9 @@ export function ImportModal({
 
           {result && (
             <div className="rounded-xl border border-border bg-background/50 p-4">
-              <p className="text-sm font-medium text-popover-foreground">{t('importComplete')}</p>
+              <p className="text-sm font-medium text-popover-foreground">
+                {t('importComplete')}
+              </p>
               <div className="mt-3 flex flex-wrap gap-3">
                 {result.imported > 0 && (
                   <div className="text-primary flex items-center gap-1.5 text-sm">
@@ -614,7 +545,9 @@ export function ImportModal({
               className="bg-primary hover:bg-primary/90 text-primary-foreground"
             >
               {importing && <Loader2 className="size-4 animate-spin" />}
-              {parsedRows.length > 0 ? t('importBtn', { count: parsedRows.length }) : t('importBtn', { count: 0 })}
+              {parsedRows.length > 0
+                ? t('importBtn', { count: parsedRows.length })
+                : t('importBtn', { count: 0 })}
             </Button>
           )}
         </DialogFooter>

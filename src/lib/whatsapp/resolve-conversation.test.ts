@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { describe, expect, it } from 'vitest';
 
 import { resolveConversationByPhone } from './resolve-conversation';
 import { SendMessageError } from './send-message';
@@ -24,7 +24,7 @@ interface Script {
   existingConversation?: { id: string } | null; // conversations select.limit(1)
   /** Per-call conversation lookup results — overrides existingConversation.
    *  Lets a test simulate "miss, then hit" for the unique-race path. */
-  existingConversationByCall?: (({ id: string } | null))[];
+  existingConversationByCall?: ({ id: string } | null)[];
   insertedConversationId?: string; // conversations insert -> single
   insertConversationError?: { code?: string } | null;
 }
@@ -68,6 +68,13 @@ function makeDb(script: Script): SupabaseClient {
     maybeSingle: () => {
       if (table === 'whatsapp_config')
         return Promise.resolve({ data: script.config ?? null, error: null });
+      if (table === 'contacts' && mode === 'select') {
+        const rows = script.contactCandidatesByCall
+          ? (script.contactCandidatesByCall[likeCalls] ?? [])
+          : (script.contactCandidates ?? []);
+        likeCalls++;
+        return Promise.resolve({ data: rows[0] ?? null, error: null });
+      }
       return Promise.resolve({ data: null, error: null });
     },
     single: () => {
@@ -78,7 +85,11 @@ function makeDb(script: Script): SupabaseClient {
             error: script.insertContactError,
           });
         return Promise.resolve({
-          data: { id: script.insertedContactId },
+          data: {
+            id: script.insertedContactId,
+            phone: '14155550123',
+            archived_at: null,
+          },
           error: null,
         });
       }

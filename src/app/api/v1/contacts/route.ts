@@ -8,22 +8,22 @@
 // `created: false`; a new row returns 201 with `created: true`.
 // ============================================================
 
-import { requireApiKey } from '@/lib/auth/api-context';
-import { ok, okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
-import {
-  parseListParams,
-  keysetFilter,
-  buildPage,
-} from '@/lib/api/v1/pagination';
 import {
   CONTACT_SELECT,
-  serializeContact,
+  ContactError,
   findOrCreateContact,
-  setContactTags,
   getContactById,
   resolveAuditUserId,
-  ContactError,
+  serializeContact,
+  setContactTags,
 } from '@/lib/api/v1/contacts';
+import {
+  buildPage,
+  keysetFilter,
+  parseListParams,
+} from '@/lib/api/v1/pagination';
+import { fail, ok, okList, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { requireApiKey } from '@/lib/auth/api-context';
 
 // PostgREST filter values are comma/paren-delimited; strip anything
 // that could break the `.or()` grammar before interpolating a search
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
 
     const auditUserId = await resolveAuditUserId(ctx.supabase, ctx.accountId);
 
-    const { id, created } = await findOrCreateContact(
+    const { id, created, status } = await findOrCreateContact(
       ctx.supabase,
       ctx.accountId,
       auditUserId,
@@ -130,7 +130,8 @@ export async function POST(request: Request) {
         ctx.accountId,
         auditUserId,
         id,
-        body.tags.filter((t): t is string => typeof t === 'string')
+        body.tags.filter((t): t is string => typeof t === 'string'),
+        status === 'restored' ? 'add' : 'replace'
       );
     }
 

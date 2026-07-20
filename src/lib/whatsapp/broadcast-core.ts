@@ -17,18 +17,17 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-import { sendTemplateMessage } from '@/lib/whatsapp/meta-api';
+import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
 import { decrypt } from '@/lib/whatsapp/encryption';
+import { sendTemplateMessage } from '@/lib/whatsapp/meta-api';
 import {
-  sanitizePhoneForMeta,
+  isRecipientNotAllowedError,
   isValidE164,
   phoneVariants,
-  isRecipientNotAllowedError,
+  sanitizePhoneForMeta,
 } from '@/lib/whatsapp/phone-utils';
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard';
 import type { MessageTemplate } from '@/types';
-import { findOrCreateContact } from '@/lib/api/v1/contacts';
 
 /** Thrown by createBroadcast on a caller-visible failure; route maps it. */
 export class BroadcastError extends Error {
@@ -147,16 +146,25 @@ export async function createBroadcast(
   const resolved: { contactId: string; phone: string; params: string[] }[] = [];
   let rejected = 0;
   for (const r of recipients) {
-    const sanitized = sanitizePhoneForMeta(typeof r.to === 'string' ? r.to : '');
+    const sanitized = sanitizePhoneForMeta(
+      typeof r.to === 'string' ? r.to : ''
+    );
     if (!isValidE164(sanitized)) {
       rejected++;
       continue;
     }
-    const { id } = await findOrCreateContact(db, accountId, auditUserId, {
+    const identity = await resolveContactIdentity(db, {
+      accountId,
+      auditUserId,
       phone: sanitized,
+      intent: 'outbound',
     });
+    if (!identity) {
+      rejected++;
+      continue;
+    }
     resolved.push({
-      contactId: id,
+      contactId: identity.contact.id,
       phone: sanitized,
       params: Array.isArray(r.params)
         ? r.params.filter((p): p is string => typeof p === 'string')
@@ -268,7 +276,10 @@ export async function deliverBroadcast(
   for (const recipient of plan.planned) {
     // Recheck the materialized recipient immediately before Meta. Archive
     // cancels pending rows, and terminal writes below remain pending-only.
-    const phone = await getDeliverableRecipientPhone(db, recipient.recipientRowId);
+    const phone = await getDeliverableRecipientPhone(
+      db,
+      recipient.recipientRowId
+    );
     if (!phone) continue;
 
     const variants = phoneVariants(phone);
@@ -290,7 +301,8 @@ export async function deliverBroadcast(
         lastError = null;
         break;
       } catch (error) {
-        const message = error instanceof Error ? error.message : 'Unknown error';
+        const message =
+          error instanceof Error ? error.message : 'Unknown error';
         lastError = message;
         // Only a "recipient not allowed" error is worth another variant.
         if (!isRecipientNotAllowedError(message)) break;

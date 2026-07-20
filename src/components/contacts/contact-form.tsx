@@ -12,6 +12,7 @@ import {
   isUniqueViolation,
   type ExistingContact,
 } from '@/lib/contacts/dedupe';
+import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
 import {
   Dialog,
   DialogContent,
@@ -132,7 +133,7 @@ export function ContactForm({
 
     // Hard-block an exact duplicate on create (the DB unique index is
     // the real backstop; this avoids a round-trip + a raw error toast).
-    if (!isEdit && dupMatch?.exact) {
+    if (!isEdit && dupMatch?.exact && !dupMatch.contact.archived_at) {
       toast.error(t('toastConflict'));
       return;
     }
@@ -162,20 +163,17 @@ export function ContactForm({
           .eq('id', contactId);
         if (error) throw error;
       } else {
-        const { data, error } = await supabase
-          .from('contacts')
-          .insert({
-            user_id: user.id,
-            account_id: accountId,
-            name: name.trim() || null,
-            phone: phone.trim(),
-            email: email.trim() || null,
-            company: company.trim() || null,
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
-        contactId = data.id;
+        const identity = await resolveContactIdentity(supabase, {
+          accountId,
+          auditUserId: user.id,
+          phone: phone.trim(),
+          name,
+          email,
+          company,
+          intent: 'restore',
+        });
+        if (!identity) throw new Error('Failed to resolve contact');
+        contactId = identity.contact.id;
       }
 
       // Sync tags

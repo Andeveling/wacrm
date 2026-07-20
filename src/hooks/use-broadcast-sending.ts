@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
-import { Contact, MessageTemplate } from '@/types';
+import { normalizeKey } from '@/lib/contacts/dedupe';
+import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
+import { createClient } from '@/lib/supabase/client';
+import type { Contact, MessageTemplate } from '@/types';
 
 export type CustomFieldOperator = 'is' | 'is_not' | 'contains';
 
@@ -88,7 +90,7 @@ type CustomValueIndex = Map<string, Map<string, string>>;
 export function resolveVariables(
   variables: Record<string, VariableMapping>,
   contact: Contact,
-  customValues?: Map<string, string>,
+  customValues?: Map<string, string>
 ): string[] {
   // Keys are typically "1","2",... — numeric-aware sort keeps
   // {{1}} before {{10}}.
@@ -124,7 +126,7 @@ export function resolveVariables(
  */
 async function fetchCustomValueIndex(
   supabase: ReturnType<typeof createClient>,
-  contactIds: string[],
+  contactIds: string[]
 ): Promise<CustomValueIndex> {
   const index: CustomValueIndex = new Map();
   if (contactIds.length === 0) return index;
@@ -183,11 +185,15 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           .from('contacts')
           .select('*')
           .in('id', uniqueContactIds);
-        if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
+        if (error)
+          throw new Error(`Failed to fetch contacts: ${error.message}`);
         contacts = data ?? [];
       }
     } else if (audience.type === 'custom_field' && audience.customField) {
-      contacts = await resolveCustomFieldAudience(supabase, audience.customField);
+      contacts = await resolveCustomFieldAudience(
+        supabase,
+        audience.customField
+      );
     } else if (audience.type === 'csv' && audience.csvContacts) {
       contacts = await upsertCsvContacts(supabase, audience.csvContacts);
     }
@@ -219,7 +225,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
    */
   async function upsertCsvContacts(
     supabase: ReturnType<typeof createClient>,
-    csvRows: { phone: string; name?: string }[],
+    csvRows: { phone: string; name?: string }[]
   ): Promise<Contact[]> {
     if (csvRows.length === 0) return [];
 
@@ -234,63 +240,30 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       throw new Error('Your profile is not linked to an account.');
     }
 
-    // De-duplicate by phone within the CSV (users can paste duplicates).
+    // De-duplicate by canonical phone within the CSV.
     const uniqueByPhone = new Map<string, { phone: string; name?: string }>();
     for (const row of csvRows) {
-      if (row.phone) uniqueByPhone.set(row.phone, row);
-    }
-    const phones = [...uniqueByPhone.keys()];
-
-    // Single round-trip lookup of existing contacts by phone.
-    const { data: existing, error: lookupErr } = await supabase
-      .from('contacts')
-      .select('*')
-      .eq('user_id', user.id)
-      .in('phone', phones);
-    if (lookupErr) {
-      throw new Error(`Failed to look up CSV contacts: ${lookupErr.message}`);
+      const key = normalizeKey(row.phone);
+      if (key && !uniqueByPhone.has(key)) uniqueByPhone.set(key, row);
     }
 
-    const byPhone = new Map<string, Contact>();
-    for (const c of (existing ?? []) as Contact[]) {
-      if (c.phone) byPhone.set(c.phone, c);
+    const contacts: Contact[] = [];
+    for (const row of uniqueByPhone.values()) {
+      const identity = await resolveContactIdentity(supabase, {
+        accountId,
+        auditUserId: user.id,
+        phone: row.phone,
+        name: row.name,
+        intent: 'outbound',
+      });
+      if (identity) contacts.push(identity.contact as unknown as Contact);
     }
-
-    // Insert only missing contacts, in one batch per 200 rows (PostgREST
-    // has a default payload cap — 200 keeps individual requests small).
-    const missing = phones
-      .filter((p) => !byPhone.has(p))
-      .map((phone) => ({
-        user_id: user.id,
-        account_id: accountId,
-        phone,
-        name: uniqueByPhone.get(phone)?.name ?? null,
-      }));
-
-    const INSERT_CHUNK = 200;
-    for (let i = 0; i < missing.length; i += INSERT_CHUNK) {
-      const chunk = missing.slice(i, i + INSERT_CHUNK);
-      const { data: inserted, error: insertErr } = await supabase
-        .from('contacts')
-        .insert(chunk)
-        .select();
-      if (insertErr) {
-        throw new Error(`Failed to create CSV contacts: ${insertErr.message}`);
-      }
-      for (const c of (inserted ?? []) as Contact[]) {
-        if (c.phone) byPhone.set(c.phone, c);
-      }
-    }
-
-    // Preserve input order so analytics roughly matches the CSV order.
-    return phones
-      .map((p) => byPhone.get(p))
-      .filter((c): c is Contact => Boolean(c));
+    return contacts;
   }
 
   async function resolveCustomFieldAudience(
     supabase: ReturnType<typeof createClient>,
-    filter: CustomFieldFilter,
+    filter: CustomFieldFilter
   ): Promise<Contact[]> {
     const { fieldId, operator, value } = filter;
 
@@ -304,7 +277,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
     if (operator === 'is') query = query.eq('value', value);
     else if (operator === 'is_not') query = query.neq('value', value);
-    else if (operator === 'contains') query = query.ilike('value', `%${value}%`);
+    else if (operator === 'contains')
+      query = query.ilike('value', `%${value}%`);
 
     const { data: matches, error: matchErr } = await query;
     if (matchErr)
@@ -321,7 +295,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     return data ?? [];
   }
 
-  async function createAndSendBroadcast(payload: BroadcastPayload): Promise<string> {
+  async function createAndSendBroadcast(
+    payload: BroadcastPayload
+  ): Promise<string> {
     setIsProcessing(true);
     setProgress(0);
 
@@ -382,7 +358,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       if (broadcastError || !broadcast) {
         throw new Error(
-          `Failed to create broadcast: ${broadcastError?.message ?? 'unknown error'}`,
+          `Failed to create broadcast: ${broadcastError?.message ?? 'unknown error'}`
         );
       }
 
@@ -414,7 +390,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             })
             .eq('id', broadcast.id);
           throw new Error(
-            `Failed to insert recipient batch ${i / INSERT_BATCH_SIZE + 1}: ${recipientError.message}`,
+            `Failed to insert recipient batch ${i / INSERT_BATCH_SIZE + 1}: ${recipientError.message}`
           );
         }
       }
@@ -437,7 +413,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .filter((id): id is string => Boolean(id));
       const customValueIndex = await fetchCustomValueIndex(
         supabase,
-        contactIds,
+        contactIds
       );
 
       let failedCount = 0;
@@ -468,7 +444,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
               ? resolveVariables(
                   payload.variables,
                   r.contact,
-                  customValueIndex.get(r.contact.id),
+                  customValueIndex.get(r.contact.id)
                 )
               : [],
             ...(messageParams ? { messageParams } : {}),

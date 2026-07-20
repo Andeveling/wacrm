@@ -19,11 +19,15 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
-import { sanitizePhoneForMeta, isValidE164 } from '@/lib/whatsapp/phone-utils';
+import { ContactError, resolveAuditUserId } from '@/lib/api/v1/contacts';
+import { isUniqueViolation } from '@/lib/contacts/dedupe';
+import {
+  ContactIdentityError,
+  type ContactIdentityResult,
+  resolveContactIdentity,
+} from '@/lib/contacts/resolve-identity';
+import { isValidE164, sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
 import { SendMessageError } from '@/lib/whatsapp/send-message';
-import { resolveAuditUserId, ContactError } from '@/lib/api/v1/contacts';
 
 export interface ResolvedConversation {
   conversationId: string;
@@ -85,56 +89,30 @@ export async function resolveConversationByPhone(
   }
 
   // ---- contact -------------------------------------------------
-  let contactId: string;
-  let contactCreated = false;
-
-  const existing = await findExistingContact(db, accountId, sanitized);
-  if (existing) {
-    contactId = existing.id;
-    if (name && name !== existing.name) {
-      await db
-        .from('contacts')
-        .update({ name, updated_at: new Date().toISOString() })
-        .eq('id', existing.id);
+  let identity: ContactIdentityResult | null;
+  try {
+    identity = await resolveContactIdentity(db, {
+      accountId,
+      auditUserId: ownerUserId,
+      phone: sanitized,
+      name,
+      intent: 'outbound',
+    });
+  } catch (error) {
+    if (error instanceof ContactIdentityError) {
+      throw new SendMessageError('db_error', error.message, 500);
     }
-  } else {
-    const { data: created, error: createErr } = await db
-      .from('contacts')
-      .insert({
-        account_id: accountId,
-        user_id: ownerUserId,
-        phone: sanitized,
-        name: name || sanitized,
-      })
-      .select('id')
-      .single();
-
-    if (createErr || !created) {
-      // Lost a race against a concurrent inbound/API create — the
-      // unique index (migration 022) rejected the duplicate. Re-resolve.
-      if (isUniqueViolation(createErr)) {
-        const raced = await findExistingContact(db, accountId, sanitized);
-        if (raced) {
-          contactId = raced.id;
-        } else {
-          throw new SendMessageError(
-            'db_error',
-            'Failed to create contact',
-            500
-          );
-        }
-      } else {
-        console.error(
-          '[resolve-conversation] contact create error:',
-          createErr
-        );
-        throw new SendMessageError('db_error', 'Failed to create contact', 500);
-      }
-    } else {
-      contactId = created.id;
-      contactCreated = true;
-    }
+    throw error;
   }
+  if (!identity) {
+    throw new SendMessageError(
+      'contact_archived',
+      'Cannot send messages to an archived contact',
+      409
+    );
+  }
+  const contactId = identity.contact.id;
+  const contactCreated = identity.status === 'created';
 
   // ---- conversation -------------------------------------------
   // One conversation per (account, contact) — same convention as the
@@ -174,7 +152,11 @@ async function findOrCreateConversationRow(
 
   if (findErr) {
     console.error('[resolve-conversation] conversation lookup error:', findErr);
-    throw new SendMessageError('db_error', 'Failed to resolve conversation', 500);
+    throw new SendMessageError(
+      'db_error',
+      'Failed to resolve conversation',
+      500
+    );
   }
 
   if (existing && existing.length > 0) {
@@ -205,7 +187,11 @@ async function findOrCreateConversationRow(
       }
     }
     console.error('[resolve-conversation] conversation create error:', convErr);
-    throw new SendMessageError('db_error', 'Failed to create conversation', 500);
+    throw new SendMessageError(
+      'db_error',
+      'Failed to create conversation',
+      500
+    );
   }
 
   return newConv.id;
