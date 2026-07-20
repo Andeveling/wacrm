@@ -19,11 +19,13 @@ let contactRow: Record<string, unknown> | null = null
 // just the id, so the mock must model insert-then-select-by-id.
 let createdConversation: Record<string, unknown> | null = null
 
-const CONTACT = {
+const ACTIVE_CONTACT = {
   id: 'contact-1',
   account_id: 'acct-1',
   phone: '+15551234567',
+  archived_at: null,
 }
+let conversationContact: Record<string, unknown> = ACTIVE_CONTACT
 
 // Chainable Supabase mock. A fresh builder per `.from()` call tracks whether
 // `.insert()` ran so the terminal resolves to the inserted row for creates
@@ -67,7 +69,7 @@ function makeSupabaseMock() {
               id: 'conv-new',
               account_id: 'acct-1',
               contact_id: 'contact-1',
-              contact: CONTACT,
+              contact: conversationContact,
             },
             error: null,
           }
@@ -94,7 +96,7 @@ function makeSupabaseMock() {
           id: 'conv-new',
           account_id: 'acct-1',
           contact_id: 'contact-1',
-          contact: CONTACT,
+          contact: conversationContact,
         }
       }
       if (table === 'messages') messageInserts.push(payload)
@@ -178,7 +180,8 @@ describe('POST /api/whatsapp/send — contact_id template path', () => {
     messageInserts.length = 0
     existingConversation = null
     createdConversation = null
-    contactRow = CONTACT
+    conversationContact = ACTIVE_CONTACT
+    contactRow = ACTIVE_CONTACT
     supabaseMock = makeSupabaseMock()
     sendTemplateMessage.mockClear()
   })
@@ -227,7 +230,7 @@ describe('POST /api/whatsapp/send — contact_id template path', () => {
       id: 'conv-existing',
       account_id: 'acct-1',
       contact_id: 'contact-1',
-      contact: CONTACT,
+      contact: conversationContact,
     }
 
     const res = await postContactTemplate()
@@ -246,6 +249,20 @@ describe('POST /api/whatsapp/send — contact_id template path', () => {
     expect(res.status).toBe(404)
     expect(json.error).toMatch(/contact not found/i)
     expect(sendTemplateMessage).not.toHaveBeenCalled()
+  })
+
+  it('does not call Meta for an archived contact', async () => {
+    conversationContact = { ...ACTIVE_CONTACT, archived_at: '2026-07-20T00:00:00Z' }
+    contactRow = conversationContact
+
+    const res = await postContactTemplate()
+    const json = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(json.code).toBe('contact_archived')
+    expect(json.error).toMatch(/archived contacts cannot receive messages/i)
+    expect(sendTemplateMessage).not.toHaveBeenCalled()
+    expect(messageInserts).toHaveLength(0)
   })
 
   it('400s when neither conversation_id nor contact_id is provided', async () => {

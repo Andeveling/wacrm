@@ -93,6 +93,43 @@ export interface SendMessageResult {
   whatsappMessageId: string;
 }
 
+type EligibleContact = {
+  id: string;
+  phone: string | null;
+  archived_at: string | null;
+};
+
+/** Re-read the recipient immediately before crossing the Meta boundary. */
+async function requireEligibleContact(
+  db: SupabaseClient,
+  accountId: string,
+  contactId: string
+): Promise<EligibleContact> {
+  const { data: contact, error } = await db
+    .from('contacts')
+    .select('id, phone, archived_at')
+    .eq('id', contactId)
+    .eq('account_id', accountId)
+    .maybeSingle();
+
+  if (error || !contact) {
+    throw new SendMessageError(
+      'contact_ineligible',
+      'Contact is no longer eligible to receive messages',
+      409
+    );
+  }
+  if (contact.archived_at) {
+    throw new SendMessageError(
+      'contact_archived',
+      'Archived contacts cannot receive messages',
+      409
+    );
+  }
+
+  return contact as EligibleContact;
+}
+
 /**
  * Send a message in an existing conversation and persist it.
  *
@@ -229,21 +266,12 @@ export async function sendMessageToConversation(
     throw new SendMessageError('not_found', 'Conversation not found', 404);
   }
 
-  const contact = conversation.contact;
-  if (!contact?.phone) {
+  let contact = conversation.contact;
+  if (!contact?.id) {
     throw new SendMessageError(
-      'bad_request',
-      'Contact phone number not found',
-      400
-    );
-  }
-
-  const sanitizedPhone = sanitizePhoneForMeta(contact.phone);
-  if (!isValidE164(sanitizedPhone)) {
-    throw new SendMessageError(
-      'bad_request',
-      'Invalid phone number format',
-      400
+      'contact_ineligible',
+      'Contact is no longer eligible to receive messages',
+      409
     );
   }
 
@@ -329,7 +357,28 @@ export async function sendMessageToConversation(
     templateRow = data ?? null;
   }
 
+  // Check account ownership and lifecycle after all local preparation, so
+  // archiving that happens while this request is in flight still blocks Meta.
+  contact = await requireEligibleContact(db, accountId, contact.id);
+  if (!contact.phone) {
+    throw new SendMessageError(
+      'bad_request',
+      'Contact phone number not found',
+      400
+    );
+  }
+  const sanitizedPhone = sanitizePhoneForMeta(contact.phone);
+  if (!isValidE164(sanitizedPhone)) {
+    throw new SendMessageError(
+      'bad_request',
+      'Invalid phone number format',
+      400
+    );
+  }
+
   const attempt = async (phone: string): Promise<string> => {
+    // Recheck for every variant: an archive can race the previous failed send.
+    await requireEligibleContact(db, accountId, contact.id);
     if (messageType === 'template') {
       const result = await sendTemplateMessage({
         phoneNumberId: config.phone_number_id,

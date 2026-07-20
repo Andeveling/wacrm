@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+vi.mock('@/lib/whatsapp/encryption', () => ({
+  decrypt: () => 'token',
+  encrypt: (value: string) => value,
+  isLegacyFormat: () => false,
+}));
+
 import {
   sendMessageToConversation,
   SendMessageError,
@@ -13,6 +19,46 @@ function noDb(): SupabaseClient {
   return {
     from() {
       throw new Error('db should not be queried for invalid params');
+    },
+  } as unknown as SupabaseClient;
+}
+
+function archivedContactDb(): SupabaseClient {
+  return {
+    from(table: string) {
+      const result =
+        table === 'conversations'
+          ? {
+              data: {
+                id: 'conv-1',
+                contact: { id: 'contact-1', phone: '+15551234567' },
+              },
+              error: null,
+            }
+          : table === 'whatsapp_config'
+            ? {
+                data: {
+                  id: 'config-1',
+                  phone_number_id: 'phone-1',
+                  access_token: 'encrypted',
+                },
+                error: null,
+              }
+            : {
+                data: {
+                  id: 'contact-1',
+                  phone: '+15551234567',
+                  archived_at: '2026-07-20T00:00:00Z',
+                },
+                error: null,
+              };
+      const query: Record<string, unknown> = {};
+      const chain = () => query;
+      query.select = chain;
+      query.eq = chain;
+      query.single = vi.fn(async () => result);
+      query.maybeSingle = vi.fn(async () => result);
+      return query;
     },
   } as unknown as SupabaseClient;
 }
@@ -155,5 +201,25 @@ describe('SendMessageError', () => {
     expect(e.code).toBe('meta_error');
     expect(e.status).toBe(502);
     expect(e).toBeInstanceOf(Error);
+  });
+});
+
+describe('sendMessageToConversation — contact eligibility', () => {
+  it('does not call Meta when the contact was archived after the conversation loaded', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    try {
+      await expect(
+        sendMessageToConversation(archivedContactDb(), 'acct-1', {
+          conversationId: 'conv-1',
+          messageType: 'text',
+          contentText: 'Hello',
+        })
+      ).rejects.toMatchObject({ code: 'contact_archived', status: 409 });
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

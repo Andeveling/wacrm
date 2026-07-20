@@ -194,7 +194,7 @@ export async function POST(request: Request) {
     } catch (err) {
       if (err instanceof SendMessageError) {
         return NextResponse.json(
-          { error: err.message },
+          { error: err.message, code: err.code },
           { status: err.status }
         )
       }
