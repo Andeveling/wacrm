@@ -18,6 +18,7 @@ function makeDb(options: {
   createError?: { code: string } | null;
 }) {
   const contacts = [...(options.contacts ?? [null])];
+  const inserts: Record<string, unknown>[] = [];
   const updates: Record<string, unknown>[] = [];
   const tags: Record<string, unknown>[] = [];
   let table = '';
@@ -32,6 +33,7 @@ function makeDb(options: {
     insert: (value: Record<string, unknown>) => {
       operation = 'insert';
       payload = value;
+      if (table === 'contacts') inserts.push(value);
       if (table === 'contact_tags') tags.push(value);
       return builder;
     },
@@ -62,6 +64,7 @@ function makeDb(options: {
         return builder;
       },
     } as unknown as SupabaseClient,
+    inserts,
     updates,
     tags,
   };
@@ -104,7 +107,7 @@ describe('resolveContactIdentity', () => {
       email: 'old@example.com',
       company: null,
     };
-    const { db, updates } = makeDb({ contacts: [archived] });
+    const { db, inserts, updates } = makeDb({ contacts: [archived] });
 
     const result = await resolveContactIdentity(db, {
       ...base,
@@ -114,6 +117,7 @@ describe('resolveContactIdentity', () => {
     });
 
     expect(result?.status).toBe('restored');
+    expect(inserts).toEqual([]);
     expect(updates).toEqual([
       {
         archived_at: null,
