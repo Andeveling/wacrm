@@ -70,8 +70,9 @@ function sleep(ms: number) {
 }
 
 interface BroadcastApiResult {
+  recipient_id?: string;
   phone: string;
-  status: 'sent' | 'failed';
+  status: 'sent' | 'failed' | 'cancelled';
   whatsapp_message_id?: string;
   error?: string;
 }
@@ -390,6 +391,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       const recipientRows = contacts.map((contact) => ({
         broadcast_id: broadcast.id,
         contact_id: contact.id,
+        recipient_phone: contact.phone,
         status: 'pending' as const,
       }));
 
@@ -460,6 +462,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         const apiRecipients = batch
           .filter((r) => r.contact?.phone)
           .map((r) => ({
+            recipient_id: r.id,
             phone: r.contact!.phone as string,
             params: r.contact
               ? resolveVariables(
@@ -492,57 +495,23 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
           const resultsByPhone = new Map<string, BroadcastApiResult>();
           for (const r of (data.results ?? []) as BroadcastApiResult[]) {
-            resultsByPhone.set(r.phone, r);
+            resultsByPhone.set(r.recipient_id ?? r.phone, r);
           }
 
           for (const recipient of batch) {
-            const phone = recipient.contact?.phone;
-            const result = phone ? resultsByPhone.get(phone) : undefined;
+            const result = resultsByPhone.get(recipient.id);
 
             if (!result) {
               failedCount++;
-              await supabase
-                .from('broadcast_recipients')
-                .update({
-                  status: 'failed',
-                  error_message: 'No phone number on contact',
-                })
-                .eq('id', recipient.id);
               continue;
             }
 
-            if (result.status === 'sent') {
-              await supabase
-                .from('broadcast_recipients')
-                .update({
-                  status: 'sent',
-                  sent_at: new Date().toISOString(),
-                  whatsapp_message_id: result.whatsapp_message_id ?? null,
-                  error_message: null,
-                })
-                .eq('id', recipient.id);
-            } else {
+            if (result.status === 'failed') {
               failedCount++;
-              await supabase
-                .from('broadcast_recipients')
-                .update({
-                  status: 'failed',
-                  error_message: result.error ?? 'Unknown error',
-                })
-                .eq('id', recipient.id);
             }
           }
-        } catch (err) {
-          for (const recipient of batch) {
-            failedCount++;
-            await supabase
-              .from('broadcast_recipients')
-              .update({
-                status: 'failed',
-                error_message: err instanceof Error ? err.message : 'Unknown error',
-              })
-              .eq('id', recipient.id);
-          }
+        } catch {
+          failedCount += batch.length;
         }
 
         const progressPct =

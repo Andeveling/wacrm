@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(57);
+SELECT plan(61);
 
 SELECT ok(
   EXISTS (
@@ -42,6 +42,10 @@ SELECT has_column(
 SELECT has_column(
   'public', 'broadcast_recipients', 'cancellation_reason',
   'broadcast recipients record why cancellation occurred'
+);
+SELECT has_column(
+  'public', 'broadcast_recipients', 'recipient_phone',
+  'broadcast recipients preserve their materialized phone'
 );
 
 SELECT ok(
@@ -289,6 +293,28 @@ SELECT ok((SELECT archived_at IS NULL FROM contacts WHERE id = '00000000-0000-00
   'restore clears the archive timestamp');
 SELECT is((SELECT string_agg(status, ',' ORDER BY id) FROM broadcast_recipients WHERE contact_id = '00000000-0000-0000-0000-000000000201'), 'cancelled,sent,delivered,read,replied,failed',
   'restore does not reactivate cancelled work');
+SELECT is(
+  (SELECT recipient_phone FROM broadcast_recipients WHERE id = '00000000-0000-0000-0000-000000000311'),
+  '+10000000201',
+  'broadcast recipients retain the original materialized phone'
+);
+UPDATE contacts
+SET phone = '+19999999999'
+WHERE id = '00000000-0000-0000-0000-000000000201';
+SELECT is(
+  (SELECT recipient_phone FROM broadcast_recipients WHERE id = '00000000-0000-0000-0000-000000000311'),
+  '+10000000201',
+  'editing a contact cannot change a materialized recipient'
+);
+UPDATE broadcast_recipients
+SET status = 'sent'
+WHERE id = '00000000-0000-0000-0000-000000000311'
+  AND status = 'pending';
+SELECT is(
+  (SELECT status FROM broadcast_recipients WHERE id = '00000000-0000-0000-0000-000000000311'),
+  'cancelled',
+  'a pending-only send completion cannot overwrite concurrent cancellation'
+);
 SELECT throws_ok(
   $$ SELECT set_config('request.jwt.claim.sub', '', true); SELECT public.archive_contact('00000000-0000-0000-0000-000000000201') $$,
   '42501', 'Unauthorized', 'an unauthenticated caller cannot archive a contact'

@@ -58,7 +58,6 @@ export interface CreateBroadcastParams {
 
 interface PlannedRecipient {
   recipientRowId: string;
-  phone: string;
   params: string[];
 }
 
@@ -217,6 +216,7 @@ export async function createBroadcast(
       deduped.map((r) => ({
         broadcast_id: broadcast.id,
         contact_id: r.contactId,
+        recipient_phone: r.phone,
         status: 'pending' as const,
       }))
     )
@@ -231,7 +231,7 @@ export async function createBroadcast(
   const byContact = new Map(deduped.map((r) => [r.contactId, r]));
   const planned: PlannedRecipient[] = recipientRows.map((row) => {
     const r = byContact.get(row.contact_id as string)!;
-    return { recipientRowId: row.id as string, phone: r.phone, params: r.params };
+    return { recipientRowId: row.id as string, params: r.params };
   });
 
   return {
@@ -266,7 +266,12 @@ export async function deliverBroadcast(
   let sentCount = 0;
 
   for (const recipient of plan.planned) {
-    const variants = phoneVariants(recipient.phone);
+    // Recheck the materialized recipient immediately before Meta. Archive
+    // cancels pending rows, and terminal writes below remain pending-only.
+    const phone = await getDeliverableRecipientPhone(db, recipient.recipientRowId);
+    if (!phone) continue;
+
+    const variants = phoneVariants(phone);
     let sentMessageId: string | null = null;
     let lastError: string | null = null;
 
@@ -293,24 +298,19 @@ export async function deliverBroadcast(
     }
 
     if (sentMessageId) {
-      sentCount++;
-      await db
-        .from('broadcast_recipients')
-        .update({
+      if (
+        await completeBroadcastRecipient(db, recipient.recipientRowId, {
           status: 'sent',
-          sent_at: new Date().toISOString(),
-          whatsapp_message_id: sentMessageId,
-          error_message: null,
+          whatsappMessageId: sentMessageId,
         })
-        .eq('id', recipient.recipientRowId);
+      ) {
+        sentCount++;
+      }
     } else {
-      await db
-        .from('broadcast_recipients')
-        .update({
-          status: 'failed',
-          error_message: lastError || 'Unknown error',
-        })
-        .eq('id', recipient.recipientRowId);
+      await completeBroadcastRecipient(db, recipient.recipientRowId, {
+        status: 'failed',
+        errorMessage: lastError || 'Unknown error',
+      });
     }
   }
 
@@ -324,4 +324,47 @@ export async function deliverBroadcast(
       updated_at: new Date().toISOString(),
     })
     .eq('id', plan.broadcastId);
+}
+
+/** Returns a pending recipient's materialized phone only while its contact is active. */
+export async function getDeliverableRecipientPhone(
+  db: SupabaseClient,
+  recipientRowId: string
+): Promise<string | null> {
+  const { data } = await db
+    .from('broadcast_recipients')
+    .select('recipient_phone, contacts!inner(archived_at)')
+    .eq('id', recipientRowId)
+    .eq('status', 'pending')
+    .is('contacts.archived_at', null)
+    .maybeSingle();
+
+  return (data as { recipient_phone?: string } | null)?.recipient_phone ?? null;
+}
+
+/** Complete only a still-pending recipient so concurrent archival wins. */
+export async function completeBroadcastRecipient(
+  db: SupabaseClient,
+  recipientRowId: string,
+  result:
+    | { status: 'sent'; whatsappMessageId: string }
+    | { status: 'failed'; errorMessage: string }
+): Promise<boolean> {
+  const update =
+    result.status === 'sent'
+      ? {
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          whatsapp_message_id: result.whatsappMessageId,
+          error_message: null,
+        }
+      : { status: 'failed', error_message: result.errorMessage };
+  const { data } = await db
+    .from('broadcast_recipients')
+    .update(update)
+    .eq('id', recipientRowId)
+    .eq('status', 'pending')
+    .select('id')
+    .maybeSingle();
+  return Boolean(data);
 }

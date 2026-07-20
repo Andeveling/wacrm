@@ -5,6 +5,10 @@ import { decrypt } from '@/lib/whatsapp/encryption'
 import type { SendTimeParams } from '@/lib/whatsapp/template-send-builder'
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
 import {
+  completeBroadcastRecipient,
+  getDeliverableRecipientPhone,
+} from '@/lib/whatsapp/broadcast-core'
+import {
   sanitizePhoneForMeta,
   isValidE164,
   phoneVariants,
@@ -17,8 +21,9 @@ import {
 } from '@/lib/rate-limit'
 
 interface BroadcastResult {
+  recipient_id?: string
   phone: string
-  status: 'sent' | 'failed'
+  status: 'sent' | 'failed' | 'cancelled'
   whatsapp_message_id?: string
   error?: string
 }
@@ -46,6 +51,8 @@ interface BroadcastResult {
  * shape is what actually fixes that.
  */
 interface NewRecipient {
+  /** Required for a persisted dashboard delivery. */
+  recipient_id?: string
   phone: string
   /** Body variable values, one per {{N}}. Legacy field. */
   params?: string[]
@@ -180,10 +187,25 @@ export async function POST(request: Request) {
     let failedCount = 0
 
     for (const recipient of recipients) {
-      const sanitized = sanitizePhoneForMeta(recipient.phone)
+      // Dashboard deliveries are tied to their materialized row. Re-read it
+      // here so an archive that cancelled it cannot reach Meta.
+      const phone = recipient.recipient_id
+        ? await getDeliverableRecipientPhone(supabase, recipient.recipient_id)
+        : recipient.phone
+      if (!phone) {
+        results.push({
+          recipient_id: recipient.recipient_id,
+          phone: recipient.phone,
+          status: 'cancelled',
+          error: 'Recipient is no longer eligible',
+        })
+        continue
+      }
+      const sanitized = sanitizePhoneForMeta(phone)
 
       if (!isValidE164(sanitized)) {
         results.push({
+          recipient_id: recipient.recipient_id,
           phone: recipient.phone,
           status: 'failed',
           error: 'Invalid phone number format',
@@ -226,23 +248,37 @@ export async function POST(request: Request) {
       }
 
       if (sentMessageId) {
+        const completed = recipient.recipient_id
+          ? await completeBroadcastRecipient(supabase, recipient.recipient_id, {
+              status: 'sent',
+              whatsappMessageId: sentMessageId,
+            })
+          : true
         results.push({
-          phone: recipient.phone,
-          status: 'sent',
-          whatsapp_message_id: sentMessageId,
+          recipient_id: recipient.recipient_id,
+          phone,
+          status: completed ? 'sent' : 'cancelled',
+          ...(completed ? { whatsapp_message_id: sentMessageId } : {}),
         })
-        sentCount++
+        if (completed) sentCount++
       } else {
         console.error(
           `Failed to send broadcast to ${recipient.phone}:`,
           lastError
         )
+        const completed = recipient.recipient_id
+          ? await completeBroadcastRecipient(supabase, recipient.recipient_id, {
+              status: 'failed',
+              errorMessage: lastError || 'Unknown error',
+            })
+          : true
         results.push({
-          phone: recipient.phone,
-          status: 'failed',
-          error: lastError || 'Unknown error',
+          recipient_id: recipient.recipient_id,
+          phone,
+          status: completed ? 'failed' : 'cancelled',
+          ...(completed ? { error: lastError || 'Unknown error' } : {}),
         })
-        failedCount++
+        if (completed) failedCount++
       }
     }
 
