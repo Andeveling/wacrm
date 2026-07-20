@@ -142,7 +142,8 @@
       "clearAll": "Clear all",
       "noConversations": "No conversations found",
       "noMessagesYet": "No messages yet",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "archived": "Archived"
     },
     "messageThread": {
       "backToConversations": "Back to conversations",
@@ -166,7 +167,12 @@
       "selectConversation": "Select a conversation",
       "selectConversationHint": "Choose a conversation from the left to start messaging",
       "today": "Today",
-      "yesterday": "Yesterday"
+      "yesterday": "Yesterday",
+      "archivedTitle": "Archived contact",
+      "archivedHint": "History remains visible, but communication is blocked until this contact is restored.",
+      "restore": "Restore",
+      "restored": "Contact restored",
+      "restoreError": "Could not restore the contact"
     },
     "sessionTimer": {
       "expired": "Expired",
@@ -182,6 +188,8 @@
       "sessionExpiredPlaceholder": "Session expired - use a template",
       "typeMessagePlaceholder": "Type a message... (Shift+Enter for new line)",
       "readOnlyTitle": "Read-only — your role can't send messages",
+      "archivedPlaceholder": "Archived contact — restore to send messages",
+      "archivedTitle": "Archived contacts cannot receive messages",
       "recording": "Recording… {current} / {max}",
       "cancel": "Cancel",
       "stopAndAttach": "Stop and attach",

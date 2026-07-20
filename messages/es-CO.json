@@ -142,7 +142,8 @@
       "clearAll": "Borrar todo",
       "noConversations": "No se encontraron conversaciones",
       "noMessagesYet": "Todavía no hay mensajes",
-      "unknown": "Desconocido"
+      "unknown": "Desconocido",
+      "archived": "Archivado"
     },
     "messageThread": {
       "backToConversations": "Volver a conversaciones",
@@ -166,7 +167,12 @@
       "selectConversation": "Selecciona una conversación",
       "selectConversationHint": "Elige una conversación a la izquierda para empezar a chatear",
       "today": "Hoy",
-      "yesterday": "Ayer"
+      "yesterday": "Ayer",
+      "archivedTitle": "Contacto archivado",
+      "archivedHint": "El historial sigue visible, pero la comunicación está bloqueada hasta restaurar este contacto.",
+      "restore": "Restaurar",
+      "restored": "Contacto restaurado",
+      "restoreError": "No se pudo restaurar el contacto"
     },
     "sessionTimer": {
       "expired": "Expirada",
@@ -182,6 +188,8 @@
       "sessionExpiredPlaceholder": "Sesión expirada - usa una plantilla",
       "typeMessagePlaceholder": "Escribe un mensaje... (Shift+Enter para salto de línea)",
       "readOnlyTitle": "Solo lectura — tu rol no puede enviar mensajes",
+      "archivedPlaceholder": "Contacto archivado — restáuralo para enviar mensajes",
+      "archivedTitle": "Los contactos archivados no pueden recibir mensajes",
       "recording": "Grabando… {current} / {max}",
       "cancel": "Cancelar",
       "stopAndAttach": "Detener y adjuntar",

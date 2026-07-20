@@ -111,6 +111,7 @@ interface MediaDraft {
 
 interface MessageComposerProps {
   conversationId: string;
+  archived?: boolean;
   sessionExpired: boolean;
   onSend: (text: string, replyToId?: string) => void;
   onSendMedia: (payload: SendMediaPayload) => void;
@@ -133,6 +134,7 @@ const OPUS_ENCODER_PATH = "/opus/encoderWorker.min.js";
 
 export function MessageComposer({
   conversationId,
+  archived = false,
   sessionExpired,
   onSend,
   onSendMedia,
@@ -188,7 +190,7 @@ export function MessageComposer({
   // For solo users this is always true — single-owner accounts pass
   // every capability — so the disabled branch is a no-op there.
   const canSend = useCan("send-messages");
-  const readOnly = !canSend;
+  const readOnly = !canSend || archived;
   // Media (like free-form text) is only allowed inside the 24h window.
   const inputsDisabled = readOnly || sessionExpired;
 
@@ -222,7 +224,7 @@ export function MessageComposer({
 
   const handleSend = useCallback(async () => {
     const trimmed = text.trim();
-    if (!trimmed || sending || sessionExpired) return;
+    if (!trimmed || sending || sessionExpired || readOnly) return;
 
     setSending(true);
     try {
@@ -234,7 +236,7 @@ export function MessageComposer({
     } finally {
       setSending(false);
     }
-  }, [text, sending, sessionExpired, onSend, replyTo?.id]);
+  }, [text, sending, sessionExpired, readOnly, onSend, replyTo?.id]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -554,6 +556,7 @@ export function MessageComposer({
           <Button
             variant="ghost"
             size="sm"
+            disabled={readOnly}
             className="h-7 text-xs text-amber-400 hover:text-amber-300"
             onClick={onOpenTemplates}
           >
@@ -733,7 +736,9 @@ export function MessageComposer({
             onKeyDown={handleKeyDown}
             placeholder={
               readOnly
-                ? t("readOnlyPlaceholder")
+                ? archived
+                  ? t("archivedPlaceholder")
+                  : t("readOnlyPlaceholder")
                 : sessionExpired
                   ? t("sessionExpiredPlaceholder")
                   : t("typeMessagePlaceholder")
@@ -743,7 +748,13 @@ export function MessageComposer({
             // Textarea keeps its own inline title — the GatedButton
             // wrapping pattern doesn't apply to non-button inputs.
             // The placeholder text also surfaces the read-only state.
-            title={readOnly ? t("readOnlyTitle") : undefined}
+            title={
+              readOnly
+                ? archived
+                  ? t("archivedTitle")
+                  : t("readOnlyTitle")
+                : undefined
+            }
             className={cn(
               "flex-1 resize-none rounded-xl border border-border bg-muted px-4 py-2.5 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-primary/50",
               (sessionExpired || readOnly) && "cursor-not-allowed opacity-50"

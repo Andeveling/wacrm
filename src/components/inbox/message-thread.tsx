@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useCan } from "@/hooks/use-can";
 import { usePresence } from "@/hooks/use-presence";
 import { PresenceDot } from "@/components/presence/presence-dot";
 import { presenceLabel } from "@/lib/presence";
@@ -27,6 +28,8 @@ import {
   RefreshCw,
   PanelRightOpen,
   PanelRightClose,
+  ArchiveRestore,
+  Loader2,
 } from "lucide-react";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { useTranslations } from "next-intl";
@@ -109,6 +112,7 @@ interface MessageThreadProps {
    */
   contactPanelOpen?: boolean;
   onToggleContactPanel?: () => void;
+  onContactRestored?: (contactId: string) => void;
 }
 
 function formatDateSeparator(dateStr: string, t: ReturnType<typeof useTranslations>): string {
@@ -167,12 +171,14 @@ export function MessageThread({
   onRefresh,
   contactPanelOpen,
   onToggleContactPanel,
+  onContactRestored,
 }: MessageThreadProps) {
   const t = useTranslations("Inbox.messageThread");
   const tTimer = useTranslations("Inbox.sessionTimer");
   const tQuote = useTranslations("Inbox.replyQuote");
 
   const { user } = useAuth();
+  const canSend = useCan("send-messages");
   const { getPresence, getRow, now } = usePresence();
   const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -202,6 +208,7 @@ export function MessageThread({
     }, 700);
   }, [isRefreshing, onRefresh]);
   const [replyTo, setReplyTo] = useState<ReplyDraft | null>(null);
+  const [restoring, setRestoring] = useState(false);
 
   // Profiles are bounded by RLS to rows the current user is allowed to
   // see — today that's just the current user, but the dropdown keeps the
@@ -266,6 +273,8 @@ export function MessageThread({
   });
 
   const conversationId = conversation?.id;
+  const archived = !!contact?.archived_at;
+  const outgoingDisabled = archived || !canSend;
   const hasUnread = (conversation?.unread_count ?? 0) > 0;
 
   // Fetch messages whenever the selected conversation changes. Kept
@@ -447,7 +456,7 @@ export function MessageThread({
 
   const handleSend = useCallback(
     async (text: string, replyToId?: string) => {
-      if (!conversation) return;
+      if (!conversation || outgoingDisabled) return;
 
       const tempId = `temp-${Date.now()}`;
 
@@ -499,12 +508,12 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage]
+    [conversation, outgoingDisabled, onNewMessage, onUpdateMessage]
   );
 
   const handleSendMedia = useCallback(
     async (payload: SendMediaPayload) => {
-      if (!conversation) return;
+      if (!conversation || outgoingDisabled) return;
 
       // Documents show their filename in our own bubble (and to the
       // recipient as the Meta caption when no caption was typed); other
@@ -565,12 +574,12 @@ export function MessageThread({
         void deleteAccountMedia(CHAT_MEDIA_BUCKET, payload.path).catch(() => {});
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, outgoingDisabled, onNewMessage, onUpdateMessage],
   );
 
   const handleSendInteractive = useCallback(
     async (payload: InteractiveMessagePayload, replyToId?: string) => {
-      if (!conversation) return;
+      if (!conversation || outgoingDisabled) return;
 
       const tempId = `temp-${Date.now()}`;
       // Optimistic bubble — renders the buttons/list immediately via the
@@ -618,7 +627,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, outgoingDisabled, onNewMessage, onUpdateMessage],
   );
 
   const handleStatusChange = useCallback(
@@ -637,8 +646,9 @@ export function MessageThread({
   );
 
   const handleOpenTemplates = useCallback(() => {
+    if (outgoingDisabled) return;
     setTemplateModalOpen(true);
-  }, []);
+  }, [outgoingDisabled]);
 
   const handleSendTemplate = useCallback(
     async (
@@ -707,7 +717,7 @@ export function MessageThread({
         onUpdateMessage(tempId, { status: "failed" });
       }
     },
-    [conversation, onNewMessage, onUpdateMessage],
+    [conversation, outgoingDisabled, onNewMessage, onUpdateMessage],
   );
 
   // Build a quick id → Message map so reply quotes can be rendered without
@@ -759,7 +769,7 @@ export function MessageThread({
   // function dependency-free w.r.t. the reaction list.
   const postReaction = useCallback(
     async (messageId: string, emoji: string) => {
-      if (!user?.id || !conversation) {
+      if (!user?.id || !conversation || outgoingDisabled) {
         console.warn("[reactions] missing user or conversation");
         return;
       }
@@ -814,8 +824,29 @@ export function MessageThread({
         setReactions(snapshot);
       }
     },
-    [conversation, user?.id],
+    [conversation, outgoingDisabled, user?.id],
   );
+
+  const handleRestore = useCallback(async () => {
+    if (!contact || restoring || !canSend) return;
+    setRestoring(true);
+    try {
+      const response = await fetch(`/api/contacts/${contact.id}/restore`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        toast.error(payload?.error ?? t("restoreError"));
+        return;
+      }
+      onContactRestored?.(contact.id);
+      toast.success(t("restored"));
+    } catch {
+      toast.error(t("restoreError"));
+    } finally {
+      setRestoring(false);
+    }
+  }, [contact, restoring, canSend, onContactRestored, t]);
 
   const handleAssignChange = useCallback(
     async (agentId: string | null) => {
@@ -1057,6 +1088,30 @@ export function MessageThread({
         </div>
       </div>
 
+      {archived && (
+        <div className="flex items-center justify-between gap-3 border-b border-amber-500/20 bg-amber-500/10 px-3 py-2 text-xs sm:px-4">
+          <div>
+            <p className="font-medium text-amber-500">{t("archivedTitle")}</p>
+            <p className="text-muted-foreground">{t("archivedHint")}</p>
+          </div>
+          {canSend && (
+            <button
+              type="button"
+              onClick={handleRestore}
+              disabled={restoring}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-amber-500/30 bg-card px-2.5 py-1.5 font-medium text-foreground hover:bg-muted disabled:opacity-60"
+            >
+              {restoring ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <ArchiveRestore className="h-3.5 w-3.5" />
+              )}
+              {t("restore")}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Messages Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">
         {loading ? (
@@ -1111,6 +1166,7 @@ export function MessageThread({
                       <MessageActions
                         key={msg.id}
                         message={msg}
+                        readOnly={outgoingDisabled}
                         onReply={() => handleStartReply(msg)}
                         onReact={(emoji) => {
                           if (emoji) void postReaction(msg.id, emoji);
@@ -1138,6 +1194,7 @@ export function MessageThread({
           auto-reply configured. */}
       <AiThreadBanner
         conversationId={conversation.id}
+        readOnly={outgoingDisabled}
         disabled={conversation.ai_autoreply_disabled ?? false}
         handoffSummary={conversation.ai_handoff_summary}
         assignedAgentId={assignedAgentId}
@@ -1152,6 +1209,7 @@ export function MessageThread({
       {/* Composer */}
       <MessageComposer
         conversationId={conversation.id}
+        archived={archived}
         sessionExpired={sessionInfo.expired}
         onSend={handleSend}
         onSendMedia={handleSendMedia}
@@ -1162,7 +1220,7 @@ export function MessageThread({
       />
 
       <TemplatePicker
-        open={templateModalOpen}
+        open={templateModalOpen && !outgoingDisabled}
         onOpenChange={setTemplateModalOpen}
         onSelect={handleSendTemplate}
       />

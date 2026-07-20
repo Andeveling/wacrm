@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select('id, account_id, contact:contacts(phone)')
+      .select('id, account_id, contact:contacts(phone, archived_at)')
       .eq('id', targetMessage.conversation_id)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -101,6 +101,15 @@ export async function POST(request: Request) {
     const contact = Array.isArray(conversation.contact)
       ? conversation.contact[0]
       : conversation.contact;
+    if (contact?.archived_at) {
+      return NextResponse.json(
+        {
+          code: 'contact_archived',
+          error: 'Archived contacts cannot receive reactions',
+        },
+        { status: 409 },
+      );
+    }
     if (!contact?.phone) {
       return NextResponse.json(
         { error: 'Contact phone number not found' },

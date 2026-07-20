@@ -554,6 +554,22 @@ function InboxPageInner() {
     [activeConversation]
   );
 
+  const handleContactRestored = useCallback((contactId: string) => {
+    setConversations((prev) =>
+      prev.map((conversation) =>
+        conversation.contact?.id === contactId
+          ? {
+              ...conversation,
+              contact: { ...conversation.contact, archived_at: null },
+            }
+          : conversation,
+      ),
+    );
+    setActiveContact((prev) =>
+      prev?.id === contactId ? { ...prev, archived_at: null } : prev,
+    );
+  }, []);
+
   // On mobile (<lg) we show a SINGLE pane — either the list or the
   // thread — rather than cramming both side-by-side. Selecting a
   // conversation slides the thread in; the thread's back button pops
@@ -623,6 +639,7 @@ function InboxPageInner() {
             onRefresh={handleManualRefresh}
             contactPanelOpen={contactPanelOpen}
             onToggleContactPanel={handleToggleContactPanel}
+            onContactRestored={handleContactRestored}
           />
         </div>
 

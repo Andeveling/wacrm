@@ -44,6 +44,7 @@ async function fetchAiAccountStatus(accountId: string): Promise<AiAccountStatus>
 
 interface AiThreadBannerProps {
   conversationId: string;
+  readOnly?: boolean;
   /** `conversations.ai_autoreply_disabled` — bot paused on this thread. */
   disabled: boolean;
   /** `conversations.ai_handoff_summary` — note the bot left on handoff. */
@@ -72,6 +73,7 @@ interface AiThreadBannerProps {
  */
 export function AiThreadBanner({
   conversationId,
+  readOnly = false,
   disabled,
   handoffSummary,
   assignedAgentId,
@@ -135,7 +137,7 @@ export function AiThreadBanner({
   );
 
   // Account has no auto-reply → nothing to show. (Still loading → nothing.)
-  if (!autoReplyOn) return null;
+  if (!autoReplyOn || readOnly) return null;
 
   // Paused here (a human took over, or the model handed off).
   if (paused) {

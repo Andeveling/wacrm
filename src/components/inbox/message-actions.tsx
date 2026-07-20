@@ -18,6 +18,7 @@ const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 interface MessageActionsProps {
   message: Message;
+  readOnly?: boolean;
   onReply: () => void;
   onReact: (emoji: string) => void;
   children: ReactNode;
@@ -30,6 +31,7 @@ interface MessageActionsProps {
  */
 export function MessageActions({
   message,
+  readOnly = false,
   onReply,
   onReact,
   children,
@@ -104,38 +106,42 @@ export function MessageActions({
           isAgent ? "right-3" : "left-3",
         )}
       >
-        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-          <PopoverTrigger
+        {!readOnly && (
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger
+              className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+              aria-label={t("react")}
+            >
+              <SmilePlus className="h-3.5 w-3.5" />
+            </PopoverTrigger>
+            <PopoverContent
+              className="flex w-auto flex-row gap-1 p-1.5"
+              sideOffset={6}
+            >
+              {QUICK_EMOJIS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => handlePickEmoji(e)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none transition-transform hover:scale-125 hover:bg-muted"
+                  aria-label={t("reactWith", { emoji: e })}
+                >
+                  {e}
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        )}
+        {!readOnly && (
+          <button
+            type="button"
+            onClick={handleReply}
             className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
-            aria-label={t("react")}
+            aria-label={t("reply")}
           >
-            <SmilePlus className="h-3.5 w-3.5" />
-          </PopoverTrigger>
-          <PopoverContent
-            className="flex w-auto flex-row gap-1 p-1.5"
-            sideOffset={6}
-          >
-            {QUICK_EMOJIS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => handlePickEmoji(e)}
-                className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none transition-transform hover:scale-125 hover:bg-muted"
-                aria-label={t("reactWith", { emoji: e })}
-              >
-                {e}
-              </button>
-            ))}
-          </PopoverContent>
-        </Popover>
-        <button
-          type="button"
-          onClick={handleReply}
-          className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
-          aria-label={t("reply")}
-        >
-          <CornerUpLeft className="h-3.5 w-3.5" />
-        </button>
+            <CornerUpLeft className="h-3.5 w-3.5" />
+          </button>
+        )}
         <button
           type="button"
           onClick={handleCopy}
