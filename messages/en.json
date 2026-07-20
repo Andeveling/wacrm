@@ -1032,6 +1032,7 @@
       "statusHandedOff": "Handed off",
       "statusTimedOut": "Timed out",
       "statusPaused": "Paused by agent",
+      "statusCancelled": "Cancelled",
       "statusFailed": "Failed"
     },
     "builder": {

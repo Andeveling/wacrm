@@ -108,6 +108,7 @@ export interface Contact {
   email?: string;
   company?: string;
   avatar_url?: string;
+  archived_at: string | null;
   created_at: string;
   updated_at: string;
   /** Hydrated by queries that embed `contact_tags(tags(*))` (e.g. the
@@ -379,7 +380,14 @@ export interface Deal {
 }
 
 export type BroadcastStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
-export type RecipientStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'replied' | 'failed';
+export type RecipientStatus =
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'replied'
+  | 'failed'
+  | 'cancelled';
 
 export interface Broadcast {
   id: string;
@@ -414,6 +422,8 @@ export interface BroadcastRecipient {
   delivered_at?: string;
   read_at?: string;
   replied_at?: string;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
   error_message?: string;
   /**
    * Meta's message id, persisted when the broadcast send succeeds so

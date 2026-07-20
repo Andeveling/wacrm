@@ -63,6 +63,7 @@ const SAMPLE_CONTACT: Contact = {
   phone: '+1234567890',
   email: 'john@example.com',
   company: 'Acme Corp',
+  archived_at: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

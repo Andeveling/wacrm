@@ -39,6 +39,7 @@
     "check": "biome check .",
     "check:fix": "biome check --write .",
     "test": "vitest run",
+    "test:db": "npx --yes supabase@2.109.1 test db",
     "test:watch": "vitest"
   },
   "dependencies": {

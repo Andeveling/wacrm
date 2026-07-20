@@ -90,6 +90,17 @@ npm run dev
 Open <http://localhost:3000>. You'll be redirected to `/login` (or
 `/dashboard` if already signed in).
 
+### Database tests
+
+With Docker running, start the local stack with `npx supabase start`, then run:
+
+```bash
+npm run test:db
+```
+
+The pgTAP files under `supabase/tests/` run in transactions that end with
+`ROLLBACK`, so the local database is left unchanged.
+
 ## 🚀 Deploy on Hostinger (recommended)
 
 <p align="center">

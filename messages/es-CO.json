@@ -1032,6 +1032,7 @@
       "statusHandedOff": "Transferido",
       "statusTimedOut": "Tiempo agotado",
       "statusPaused": "Pausado por un agente",
+      "statusCancelled": "Cancelado",
       "statusFailed": "Fallido"
     },
     "builder": {

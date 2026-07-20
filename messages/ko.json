@@ -1031,6 +1031,7 @@
       "statusHandedOff": "인계됨",
       "statusTimedOut": "시간 초과",
       "statusPaused": "상담원이 일시 중지함",
+      "statusCancelled": "취소됨",
       "statusFailed": "실패"
     },
     "builder": {
