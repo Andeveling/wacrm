@@ -687,7 +687,8 @@
       "toastNotSignedIn": "Sesión no iniciada.",
       "toastNotLinked": "Tu perfil no está vinculado a ninguna cuenta.",
       "toastFailedDraft": "Error al guardar el borrador: {error}",
-      "toastDraftSaved": "Borrador guardado"
+      "toastDraftSaved": "Borrador guardado",
+      "toastArchivedCsvExcluded": "Se excluyeron {count} {count, plural, =1 {fila archivada} other {filas archivadas}} del CSV."
     },
     "wizard": {
       "next": "Siguiente",

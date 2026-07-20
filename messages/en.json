@@ -687,7 +687,8 @@
       "toastNotSignedIn": "Not signed in.",
       "toastNotLinked": "Your profile is not linked to an account.",
       "toastFailedDraft": "Failed to save draft: {error}",
-      "toastDraftSaved": "Draft saved"
+      "toastDraftSaved": "Draft saved",
+      "toastArchivedCsvExcluded": "{count} archived CSV {count, plural, =1 {row was} other {rows were}} excluded."
     },
     "wizard": {
       "next": "Next",

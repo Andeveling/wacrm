@@ -1,18 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useTranslations } from 'next-intl';
+import { useState } from 'react';
 import { toast } from 'sonner';
-import { MessageTemplate } from '@/types';
 import { Step1ChooseTemplate } from '@/components/broadcasts/step1-choose-template';
 import { Step2SelectAudience } from '@/components/broadcasts/step2-select-audience';
 import { Step3Personalize } from '@/components/broadcasts/step3-personalize';
 import { Step4ScheduleSend } from '@/components/broadcasts/step4-schedule-send';
+import { useAuth } from '@/hooks/use-auth';
 import { useBroadcastSending } from '@/hooks/use-broadcast-sending';
-import { Check } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { createClient } from '@/lib/supabase/client';
+import type { MessageTemplate } from '@/types';
 
 const steps = [
   { label: 'template', key: 'template' },
@@ -25,7 +25,8 @@ export default function NewBroadcastPage() {
   const router = useRouter();
   const t = useTranslations('Broadcasts.new');
   const { accountId } = useAuth();
-  const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
+  const { createAndSendBroadcast, isProcessing, progress } =
+    useBroadcastSending();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [template, setTemplate] = useState<MessageTemplate | null>(null);
@@ -50,19 +51,25 @@ export default function NewBroadcastPage() {
     if (!template) return;
 
     try {
-      const broadcastId = await createAndSendBroadcast({
-        name,
-        template,
-        audience: {
-          type: audience.type,
-          tagIds: audience.tagIds,
-          customField: audience.customField,
-          csvContacts: audience.csvContacts,
-          excludeTagIds: audience.excludeTagIds,
-        },
-        variables,
-        headerMediaUrl,
-      });
+      const { id: broadcastId, archivedCsvRowsExcluded } =
+        await createAndSendBroadcast({
+          name,
+          template,
+          audience: {
+            type: audience.type,
+            tagIds: audience.tagIds,
+            customField: audience.customField,
+            csvContacts: audience.csvContacts,
+            excludeTagIds: audience.excludeTagIds,
+          },
+          variables,
+          headerMediaUrl,
+        });
+      if (archivedCsvRowsExcluded > 0) {
+        toast.info(
+          t('toastArchivedCsvExcluded', { count: archivedCsvRowsExcluded })
+        );
+      }
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
       // Previously swallowed with console.error — the wizard would
@@ -134,9 +141,7 @@ export default function NewBroadcastPage() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('subtitle')}
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
       </div>
 
       {/* Step Indicator */}
@@ -161,7 +166,11 @@ export default function NewBroadcastPage() {
                 </div>
                 <span
                   className={`hidden text-sm font-medium sm:block ${
-                    isActive ? 'text-foreground' : isCompleted ? 'text-primary' : 'text-muted-foreground'
+                    isActive
+                      ? 'text-foreground'
+                      : isCompleted
+                        ? 'text-primary'
+                        : 'text-muted-foreground'
                   }`}
                 >
                   {t(`steps.${step.label}`)}

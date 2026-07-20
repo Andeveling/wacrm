@@ -1,7 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 
-import { resolveContactIdentity } from './resolve-identity';
+import {
+  resolveBroadcastCsvContacts,
+  resolveContactIdentity,
+} from './resolve-identity';
 
 type Contact = {
   id: string;
@@ -195,6 +198,36 @@ describe('resolveContactIdentity', () => {
     await expect(
       resolveContactIdentity(db, { ...base, intent: 'outbound' })
     ).resolves.toBeNull();
+    expect(updates).toEqual([]);
+  });
+
+  it('excludes archived CSV identities without restoring them', async () => {
+    const archived = {
+      id: 'archived',
+      phone: '+14155550123',
+      archived_at: '2026-01-01',
+    };
+    const created = {
+      id: 'new',
+      phone: '+14155550124',
+      archived_at: null,
+    };
+    const { db, updates } = makeDb({ contacts: [archived, null], created });
+
+    await expect(
+      resolveBroadcastCsvContacts(db, {
+        accountId: base.accountId,
+        auditUserId: base.auditUserId,
+        rows: [
+          { phone: archived.phone },
+          { phone: archived.phone },
+          { phone: created.phone, name: 'New contact' },
+        ],
+      })
+    ).resolves.toMatchObject({
+      archivedRowsExcluded: 2,
+      contacts: [created],
+    });
     expect(updates).toEqual([]);
   });
 });

@@ -686,7 +686,8 @@
       "toastNotSignedIn": "로그인되어 있지 않습니다.",
       "toastNotLinked": "프로필이 계정에 연결되어 있지 않습니다.",
       "toastFailedDraft": "초안 저장 실패: {error}",
-      "toastDraftSaved": "초안이 저장되었습니다"
+      "toastDraftSaved": "초안이 저장되었습니다",
+      "toastArchivedCsvExcluded": "보관된 CSV 행 {count}개가 제외되었습니다."
     },
     "wizard": {
       "next": "다음",

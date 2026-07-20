@@ -31,6 +31,11 @@ export interface ContactIdentityResult {
   contact: ContactIdentity;
 }
 
+export interface BroadcastCsvAudience {
+  contacts: ContactIdentity[];
+  archivedRowsExcluded: number;
+}
+
 export class ContactIdentityError extends Error {
   constructor(message: string) {
     super(message);
@@ -113,6 +118,37 @@ export async function resolveContactIdentity(
   const contact = created as ContactIdentity;
   await addTags(db, contact.id, input.tagIds);
   return { status: 'created', contact };
+}
+
+/** Resolve CSV recipients without reactivating archived identities. */
+export async function resolveBroadcastCsvContacts(
+  db: SupabaseClient,
+  input: Pick<ResolveContactIdentityInput, 'accountId' | 'auditUserId'> & {
+    rows: { phone: string; name?: string }[];
+  }
+): Promise<BroadcastCsvAudience> {
+  const contacts: ContactIdentity[] = [];
+  const resolved = new Map<string, ContactIdentity | null>();
+  let archivedRowsExcluded = 0;
+  for (const row of input.rows) {
+    const key = normalizeKey(row.phone);
+    if (!key) continue;
+
+    let contact = resolved.get(key);
+    if (contact === undefined) {
+      const identity = await resolveContactIdentity(db, {
+        ...input,
+        phone: row.phone,
+        name: row.name,
+        intent: 'outbound',
+      });
+      contact = identity?.contact ?? null;
+      resolved.set(key, contact);
+      if (contact) contacts.push(contact);
+    }
+    if (!contact) archivedRowsExcluded++;
+  }
+  return { contacts, archivedRowsExcluded };
 }
 
 function nonEmpty(value: string | null | undefined): string | undefined {

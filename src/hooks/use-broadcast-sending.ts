@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
-import { normalizeKey } from '@/lib/contacts/dedupe';
-import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
+import { resolveBroadcastCsvContacts } from '@/lib/contacts/resolve-identity';
 import { createClient } from '@/lib/supabase/client';
 import type { Contact, MessageTemplate } from '@/types';
 
@@ -51,7 +50,10 @@ interface BroadcastPayload {
 }
 
 interface UseBroadcastSendingReturn {
-  createAndSendBroadcast: (payload: BroadcastPayload) => Promise<string>;
+  createAndSendBroadcast: (payload: BroadcastPayload) => Promise<{
+    id: string;
+    archivedCsvRowsExcluded: number;
+  }>;
   isProcessing: boolean;
   progress: number;
 }
@@ -155,10 +157,14 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  async function resolveAudience(audience: AudienceConfig): Promise<Contact[]> {
+  async function resolveAudience(audience: AudienceConfig): Promise<{
+    contacts: Contact[];
+    archivedCsvRowsExcluded: number;
+  }> {
     const supabase = createClient();
 
     let contacts: Contact[] = [];
+    let archivedCsvRowsExcluded = 0;
 
     if (audience.type === 'all') {
       const { data, error } = await supabase
@@ -189,7 +195,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           .select('*')
           .in('id', uniqueContactIds)
           .is('archived_at', null);
-        if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
+        if (error)
+          throw new Error(`Failed to fetch contacts: ${error.message}`);
         contacts = data ?? [];
       }
     } else if (audience.type === 'custom_field' && audience.customField) {
@@ -198,7 +205,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         audience.customField
       );
     } else if (audience.type === 'csv' && audience.csvContacts) {
-      contacts = await upsertCsvContacts(supabase, audience.csvContacts);
+      const result = await upsertCsvContacts(supabase, audience.csvContacts);
+      contacts = result.contacts;
+      archivedCsvRowsExcluded = result.archivedRowsExcluded;
     }
 
     // Apply exclude tags (works across all contact-derived audience
@@ -212,7 +221,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       contacts = contacts.filter((c) => !excludedIds.has(c.id));
     }
 
-    return contacts;
+    return { contacts, archivedCsvRowsExcluded };
   }
 
   /**
@@ -229,8 +238,10 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
   async function upsertCsvContacts(
     supabase: ReturnType<typeof createClient>,
     csvRows: { phone: string; name?: string }[]
-  ): Promise<Contact[]> {
-    if (csvRows.length === 0) return [];
+  ): Promise<{ contacts: Contact[]; archivedRowsExcluded: number }> {
+    if (csvRows.length === 0) {
+      return { contacts: [], archivedRowsExcluded: 0 };
+    }
 
     const {
       data: { session },
@@ -243,25 +254,15 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       throw new Error('Your profile is not linked to an account.');
     }
 
-    // De-duplicate by canonical phone within the CSV.
-    const uniqueByPhone = new Map<string, { phone: string; name?: string }>();
-    for (const row of csvRows) {
-      const key = normalizeKey(row.phone);
-      if (key && !uniqueByPhone.has(key)) uniqueByPhone.set(key, row);
-    }
-
-    const contacts: Contact[] = [];
-    for (const row of uniqueByPhone.values()) {
-      const identity = await resolveContactIdentity(supabase, {
-        accountId,
-        auditUserId: user.id,
-        phone: row.phone,
-        name: row.name,
-        intent: 'outbound',
-      });
-      if (identity) contacts.push(identity.contact as unknown as Contact);
-    }
-    return contacts;
+    const result = await resolveBroadcastCsvContacts(supabase, {
+      accountId,
+      auditUserId: user.id,
+      rows: csvRows,
+    });
+    return {
+      contacts: result.contacts as unknown as Contact[],
+      archivedRowsExcluded: result.archivedRowsExcluded,
+    };
   }
 
   async function resolveCustomFieldAudience(
@@ -301,7 +302,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
   async function createAndSendBroadcast(
     payload: BroadcastPayload
-  ): Promise<string> {
+  ): Promise<{ id: string; archivedCsvRowsExcluded: number }> {
     setIsProcessing(true);
     setProgress(0);
 
@@ -326,7 +327,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       // ── Step 1: Resolve audience contacts ─────────────────────────
       setProgress(5);
-      const contacts = await resolveAudience(payload.audience);
+      const { contacts, archivedCsvRowsExcluded } = await resolveAudience(
+        payload.audience
+      );
 
       if (contacts.length === 0) {
         throw new Error('No contacts found for this audience.');
@@ -348,6 +351,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
             tagIds: payload.audience.tagIds,
             customField: payload.audience.customField,
             excludeTagIds: payload.audience.excludeTagIds,
+            archivedCsvRowsExcluded,
           },
           status: 'sending',
           total_recipients: contacts.length,
@@ -514,7 +518,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .eq('id', broadcast.id);
 
       setProgress(100);
-      return broadcast.id;
+      return { id: broadcast.id, archivedCsvRowsExcluded };
     } finally {
       setIsProcessing(false);
     }
