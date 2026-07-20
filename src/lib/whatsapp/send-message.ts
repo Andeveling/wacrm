@@ -93,14 +93,14 @@ export interface SendMessageResult {
   whatsappMessageId: string;
 }
 
-type EligibleContact = {
+export type EligibleContact = {
   id: string;
   phone: string | null;
   archived_at: string | null;
 };
 
 /** Re-read the recipient immediately before crossing the Meta boundary. */
-async function requireEligibleContact(
+export async function requireEligibleContact(
   db: SupabaseClient,
   accountId: string,
   contactId: string
@@ -473,6 +473,7 @@ export async function sendMessageToConversation(
 
     if (lastError) throw lastError;
   } catch (err) {
+    if (err instanceof SendMessageError) throw err;
     const message =
       err instanceof Error ? err.message : 'Unknown Meta API error';
     console.error('[send-message] Meta send failed for all variants:', message);
@@ -480,13 +481,15 @@ export async function sendMessageToConversation(
   }
 
   if (workingPhone !== sanitizedPhone) {
+    await requireEligibleContact(db, accountId, contact.id);
     console.log(
       `[send-message] Auto-corrected contact phone: ${sanitizedPhone} → ${workingPhone}`
     );
     await db
       .from('contacts')
       .update({ phone: workingPhone })
-      .eq('id', contact.id);
+      .eq('id', contact.id)
+      .is('archived_at', null);
   }
 
   // Persist the sent message. Field names MUST match the messages

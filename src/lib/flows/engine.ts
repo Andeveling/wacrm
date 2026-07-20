@@ -536,7 +536,8 @@ async function endRun(
       ended_at: new Date().toISOString(),
       end_reason: reason,
     })
-    .eq("id", runId);
+    .eq("id", runId)
+    .eq("status", "active");
 }
 
 // ============================================================

@@ -135,6 +135,16 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.engineSendText).not.toHaveBeenCalled()
   })
 
+  it('stops an AI reply when the outbound seam rejects an archived contact', async () => {
+    h.engineSendText.mockRejectedValueOnce(Object.assign(
+      new Error('Archived contacts cannot receive messages'),
+      { code: 'contact_archived', status: 409 },
+    ))
+
+    await expect(dispatchInboundToAiReply(ARGS)).resolves.toBeUndefined()
+    expect(h.engineSendText).toHaveBeenCalledOnce()
+  })
+
   it('skips when AI is off / not configured', async () => {
     h.loadAiConfig.mockResolvedValue(null)
     await dispatchInboundToAiReply(ARGS)
