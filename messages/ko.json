@@ -1598,7 +1598,7 @@
       "nameLabel": "이름",
       "namePlaceholder": "예: Zapier 자동화",
       "scopesLabel": "권한 범위",
-      "scopesHint": "권한 범위가 없는 키도 <code className=\"text-[11px]\">GET /api/v1/me</code>를 호출해 동작을 확인할 수 있습니다.",
+      "scopesHint": "권한 범위가 없는 키도 <code>GET /api/v1/me</code>를 호출해 동작을 확인할 수 있습니다.",
       "cancel": "취소",
       "creating": "만드는 중…",
       "createKey": "키 생성",
