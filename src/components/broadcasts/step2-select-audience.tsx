@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { normalizePhone } from '@/lib/whatsapp/phone-utils';
 import { CustomField, Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -167,7 +168,22 @@ export function Step2SelectAudience({
         audience.csvContacts &&
         audience.csvContacts.length > 0
       ) {
-        setEstimatedCount(audience.csvContacts.length);
+        const phones = [
+          ...new Set(
+            audience.csvContacts
+              .map((contact) => normalizePhone(contact.phone))
+              .filter(Boolean),
+          ),
+        ];
+        const { data } = await supabase
+          .from('contacts')
+          .select('phone_normalized, archived_at')
+          .in('phone_normalized', phones)
+          .not('archived_at', 'is', null);
+        const archivedPhones = new Set(
+          (data ?? []).map((contact) => contact.phone_normalized),
+        );
+        setEstimatedCount(phones.filter((phone) => !archivedPhones.has(phone)).length);
         return;
       } else {
         // Partially-configured audience — wait for the user to finish.
@@ -185,19 +201,15 @@ export function Step2SelectAudience({
         excludeSet = new Set((excludeRows ?? []).map((r) => r.contact_id));
       }
 
-      if (baseIds) {
-        const effective = [...baseIds].filter(
-          (id) => !excludeSet?.has(id),
-        );
-        setEstimatedCount(effective.length);
-      } else {
-        // "All" — fetch the total, then subtract exclude set if any.
-        const { count } = await supabase
-          .from('contacts')
-          .select('*', { count: 'exact', head: true });
-        const total = count ?? 0;
-        setEstimatedCount(excludeSet ? Math.max(0, total - excludeSet.size) : total);
-      }
+      const { data: activeContacts } = await supabase
+        .from('contacts')
+        .select('id')
+        .is('archived_at', null);
+      const activeIds = new Set((activeContacts ?? []).map((contact) => contact.id));
+      const effective = baseIds ?? activeIds;
+      setEstimatedCount(
+        [...effective].filter((id) => activeIds.has(id) && !excludeSet?.has(id)).length,
+      );
     } finally {
       setLoadingCount(false);
     }

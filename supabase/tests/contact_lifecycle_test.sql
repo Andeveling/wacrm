@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(61);
+SELECT plan(62);
 
 SELECT ok(
   EXISTS (
@@ -240,6 +240,13 @@ VALUES
   ('00000000-0000-0000-0000-000000000202', '00000000-0000-0000-0000-000000000104', (SELECT account_id FROM profiles WHERE user_id = '00000000-0000-0000-0000-000000000104'), '+10000000202'),
   ('00000000-0000-0000-0000-000000000203', '00000000-0000-0000-0000-000000000101', (SELECT account_id FROM profiles WHERE user_id = '00000000-0000-0000-0000-000000000101'), '+10000000203');
 
+INSERT INTO pipelines (id, user_id, account_id, name)
+VALUES ('00000000-0000-0000-0000-000000000601', '00000000-0000-0000-0000-000000000101', (SELECT account_id FROM profiles WHERE user_id = '00000000-0000-0000-0000-000000000101'), 'Lifecycle pipeline');
+INSERT INTO pipeline_stages (id, pipeline_id, name, position)
+VALUES ('00000000-0000-0000-0000-000000000611', '00000000-0000-0000-0000-000000000601', 'Qualified', 1);
+INSERT INTO deals (id, user_id, account_id, pipeline_id, stage_id, contact_id, title)
+VALUES ('00000000-0000-0000-0000-000000000621', '00000000-0000-0000-0000-000000000101', (SELECT account_id FROM profiles WHERE user_id = '00000000-0000-0000-0000-000000000101'), '00000000-0000-0000-0000-000000000601', '00000000-0000-0000-0000-000000000611', '00000000-0000-0000-0000-000000000201', 'Preserved deal');
+
 INSERT INTO broadcasts (id, user_id, account_id, name, template_name)
 VALUES ('00000000-0000-0000-0000-000000000301', '00000000-0000-0000-0000-000000000101', (SELECT account_id FROM profiles WHERE user_id = '00000000-0000-0000-0000-000000000101'), 'Lifecycle test', 'test');
 INSERT INTO broadcast_recipients (id, broadcast_id, contact_id, status, recipient_phone)
@@ -279,6 +286,8 @@ SELECT lives_ok(
 );
 SELECT ok((SELECT archived_at IS NOT NULL FROM contacts WHERE id = '00000000-0000-0000-0000-000000000201'),
   'archive timestamps the contact');
+SELECT is((SELECT stage_id FROM deals WHERE id = '00000000-0000-0000-0000-000000000621'), '00000000-0000-0000-0000-000000000611'::UUID,
+  'archive preserves the contact deal and its stage');
 SELECT is((SELECT string_agg(status, ',' ORDER BY id) FROM broadcast_recipients WHERE contact_id = '00000000-0000-0000-0000-000000000201'), 'cancelled,sent,delivered,read,replied,failed',
   'archive cancels pending broadcasts but preserves sent broadcasts');
 SELECT is((SELECT string_agg(status, ',' ORDER BY id) FROM automation_pending_executions WHERE contact_id = '00000000-0000-0000-0000-000000000201'), 'cancelled,running,done,failed',

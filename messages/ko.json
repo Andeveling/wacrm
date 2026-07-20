@@ -509,6 +509,7 @@
     },
     "card": {
       "noContact": "연락처 없음",
+      "archived": "보관됨",
       "won": "성사",
       "lost": "실패"
     },
@@ -519,6 +520,8 @@
       "titlePlaceholder": "딜 제목",
       "contact": "연락처",
       "selectContact": "연락처 선택",
+      "archived": "보관됨",
+      "restoreBeforeMessaging": "메시지를 보내기 전에 이 연락처를 복원하세요.",
       "linkToConversation": "대화에 연결",
       "value": "금액",
       "currency": "통화",

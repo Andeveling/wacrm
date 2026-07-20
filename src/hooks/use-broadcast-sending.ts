@@ -161,7 +161,10 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     let contacts: Contact[] = [];
 
     if (audience.type === 'all') {
-      const { data, error } = await supabase.from('contacts').select('*');
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .is('archived_at', null);
       if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
       contacts = data ?? [];
     } else if (
@@ -184,9 +187,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         const { data, error } = await supabase
           .from('contacts')
           .select('*')
-          .in('id', uniqueContactIds);
-        if (error)
-          throw new Error(`Failed to fetch contacts: ${error.message}`);
+          .in('id', uniqueContactIds)
+          .is('archived_at', null);
+        if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
         contacts = data ?? [];
       }
     } else if (audience.type === 'custom_field' && audience.customField) {
@@ -290,7 +293,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     const { data, error } = await supabase
       .from('contacts')
       .select('*')
-      .in('id', contactIds);
+      .in('id', contactIds)
+      .is('archived_at', null);
     if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
     return data ?? [];
   }

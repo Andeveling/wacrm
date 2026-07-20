@@ -43,16 +43,22 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
     messagesToday,
     messagesYesterday,
   ] = await Promise.all([
-    db.from('conversations').select('id', { count: 'exact', head: true }).eq('status', 'open'),
     db
       .from('conversations')
-      .select('id', { count: 'exact', head: true })
+      .select('id, contacts!inner(archived_at)', { count: 'exact', head: true })
       .eq('status', 'open')
+      .is('contacts.archived_at', null),
+    db
+      .from('conversations')
+      .select('id, contacts!inner(archived_at)', { count: 'exact', head: true })
+      .eq('status', 'open')
+      .is('contacts.archived_at', null)
       .gte('created_at', todayStart),
     db
       .from('conversations')
-      .select('id', { count: 'exact', head: true })
+      .select('id, contacts!inner(archived_at)', { count: 'exact', head: true })
       .eq('status', 'open')
+      .is('contacts.archived_at', null)
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
     db.from('contacts').select('id', { count: 'exact', head: true }).gte('created_at', todayStart),

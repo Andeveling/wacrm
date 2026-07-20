@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { normalizePhone } from '@/lib/whatsapp/phone-utils';
 import { MessageTemplate } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,12 +57,14 @@ export function Step4ScheduleSend({
       setLoadingReach(true);
       try {
         const supabase = createClient();
+        const { data: activeContacts } = await supabase
+          .from('contacts')
+          .select('id')
+          .is('archived_at', null);
+        const activeIds = new Set((activeContacts ?? []).map((contact) => contact.id));
 
         if (audience.type === 'all') {
-          const { count } = await supabase
-            .from('contacts')
-            .select('*', { count: 'exact', head: true });
-          setEstimatedReach(count ?? 0);
+          setEstimatedReach(activeIds.size);
         } else if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
           const { data: contactTags } = await supabase
             .from('contact_tags')
@@ -69,9 +72,24 @@ export function Step4ScheduleSend({
             .in('tag_id', audience.tagIds);
 
           const uniqueIds = new Set((contactTags ?? []).map((ct) => ct.contact_id));
-          setEstimatedReach(uniqueIds.size);
+          setEstimatedReach([...uniqueIds].filter((id) => activeIds.has(id)).length);
         } else if (audience.type === 'csv' && audience.csvContacts) {
-          setEstimatedReach(audience.csvContacts.length);
+          const phones = [
+            ...new Set(
+              audience.csvContacts
+                .map((contact) => normalizePhone(contact.phone))
+                .filter(Boolean),
+            ),
+          ];
+          const { data } = await supabase
+            .from('contacts')
+            .select('phone_normalized, archived_at')
+            .in('phone_normalized', phones)
+            .not('archived_at', 'is', null);
+          const archivedPhones = new Set(
+            (data ?? []).map((contact) => contact.phone_normalized),
+          );
+          setEstimatedReach(phones.filter((phone) => !archivedPhones.has(phone)).length);
         } else {
           setEstimatedReach(0);
         }

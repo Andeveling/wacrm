@@ -78,6 +78,11 @@ export function DealCard({ deal, stage, onEdit, isOverlay }: DealCardProps) {
           {initials(deal.contact?.name, deal.contact?.phone)}
         </span>
         <span className="truncate text-xs text-muted-foreground">{contactLabel}</span>
+        {deal.contact?.archived_at && (
+          <span className="shrink-0 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+            {t("archived")}
+          </span>
+        )}
       </div>
 
       <div className="mt-2 flex items-center justify-between">

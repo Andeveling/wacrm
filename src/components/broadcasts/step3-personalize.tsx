@@ -97,6 +97,7 @@ export function Step3Personalize({
         supabase
           .from('contacts')
           .select('*')
+          .is('archived_at', null)
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),

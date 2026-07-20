@@ -510,6 +510,7 @@
     },
     "card": {
       "noContact": "No contact",
+      "archived": "Archived",
       "won": "Won",
       "lost": "Lost"
     },
@@ -520,6 +521,8 @@
       "titlePlaceholder": "Deal title",
       "contact": "Contact",
       "selectContact": "Select a contact",
+      "archived": "Archived",
+      "restoreBeforeMessaging": "Restore this contact before messaging them.",
       "linkToConversation": "Link to Conversation",
       "value": "Value",
       "currency": "Currency",

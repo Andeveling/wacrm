@@ -510,6 +510,7 @@
     },
     "card": {
       "noContact": "Sin contacto",
+      "archived": "Archivado",
       "won": "Ganado",
       "lost": "Perdido"
     },
@@ -520,6 +521,8 @@
       "titlePlaceholder": "Título del negocio",
       "contact": "Contacto",
       "selectContact": "Selecciona un contacto",
+      "archived": "Archivado",
+      "restoreBeforeMessaging": "Restaura este contacto antes de enviarle mensajes.",
       "linkToConversation": "Vincular a conversación",
       "value": "Valor",
       "currency": "Moneda",

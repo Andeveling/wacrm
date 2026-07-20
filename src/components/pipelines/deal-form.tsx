@@ -113,17 +113,22 @@ export function DealForm({
     let cancelled = false;
     (async () => {
       const [c, p] = await Promise.all([
-        supabase.from("contacts").select("*").order("name"),
+        supabase.from("contacts").select("*").is("archived_at", null).order("name"),
         supabase.from("profiles").select("*").order("full_name"),
       ]);
       if (cancelled) return;
-      setContacts((c.data ?? []) as Contact[]);
+      const activeContacts = (c.data ?? []) as Contact[];
+      setContacts(
+        deal?.contact?.archived_at
+          ? [...activeContacts, deal.contact]
+          : activeContacts,
+      );
       setProfiles((p.data ?? []) as Profile[]);
     })();
     return () => {
       cancelled = true;
     };
-  }, [open, supabase]);
+  }, [open, supabase, deal]);
 
   // Fetch linked conversation for the selected contact (newest open one).
   // Clearing on no-selection is sync with prop state; the populated
@@ -245,6 +250,8 @@ export function DealForm({
     onSaved();
   }
 
+  const selectedContact = contacts.find((contact) => contact.id === contactId);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -278,13 +285,17 @@ export function DealForm({
               >
                 <option value="">{t("selectContact")}</option>
                 {contacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name || c.phone}
+                  <option key={c.id} value={c.id} disabled={Boolean(c.archived_at)}>
+                    {c.name || c.phone}{c.archived_at ? ` (${t("archived")})` : ""}
                   </option>
                 ))}
               </select>
 
-              {linkedConversation && (
+              {selectedContact?.archived_at ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  {t("restoreBeforeMessaging")}
+                </p>
+              ) : linkedConversation && (
                 <Link
                   href="/inbox"
                   className="mt-1 inline-flex items-center gap-1.5 self-start rounded-md bg-primary/10 px-2 py-1 text-xs text-primary hover:bg-primary/20"
