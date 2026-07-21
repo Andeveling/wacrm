@@ -10,8 +10,8 @@ vi.mock('react', () => ({ useCallback: <T>(callback: T) => callback }));
 vi.mock('sonner', () => ({ toast }));
 vi.mock('../_actions/actions', () => ({ updateContactLifecycle }));
 
-import { useContactLifecycle } from './use-contact-lifecycle';
 import type { ContactListItem } from '@/lib/contacts/contact-list';
+import { useContactLifecycle } from './use-contact-lifecycle';
 
 const contacts = [
   { id: '11111111-1111-4111-8111-111111111111', created_at: '2026-01-02T00:00:00Z' } as ContactListItem,
@@ -26,13 +26,18 @@ describe('useContactLifecycle', () => {
     const removeDisplayedContacts = vi.fn();
     const restoreDisplayedContacts = vi.fn();
     const clearSelectedContacts = vi.fn();
-    const update = useContactLifecycle({ contacts, removeDisplayedContacts, restoreDisplayedContacts, clearSelectedContacts });
+    const onUpdated = vi.fn();
+    const update = useContactLifecycle({ contacts, removeDisplayedContacts, restoreDisplayedContacts, clearSelectedContacts, onUpdated });
 
-    await update('archive', contacts.map((contact) => contact.id));
+    await update(
+      'archive',
+      contacts.map((contact) => contact.id)
+    );
 
     expect(removeDisplayedContacts).toHaveBeenCalledWith(contacts);
     expect(restoreDisplayedContacts).toHaveBeenCalledWith([contacts[1]]);
     expect(clearSelectedContacts).toHaveBeenCalledOnce();
+    expect(onUpdated).toHaveBeenCalledOnce();
     expect(toast.error).toHaveBeenCalledWith('toastLifecycleFailed');
   });
 });

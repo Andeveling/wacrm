@@ -3,8 +3,8 @@
 import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { updateContactLifecycle } from '../_actions/actions';
 import type { ContactListItem } from '@/lib/contacts/contact-list';
+import { updateContactLifecycle } from '../_actions/actions';
 
 interface UseContactLifecycleParams {
   contacts: ContactListItem[];
@@ -37,6 +37,7 @@ export function useContactLifecycle({
       if (!lifecycleUpdate.ok) {
         const failedIds = new Set(lifecycleUpdate.failedIds ?? visibleContactIds);
         restoreDisplayedContacts?.(contactsBeingUpdated.filter((contact) => failedIds.has(contact.id)));
+        if (failedIds.size < visibleContactIds.length) onUpdated?.();
         toast.error(t('toastLifecycleFailed'));
         return;
       }

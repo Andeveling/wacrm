@@ -72,6 +72,41 @@ describe('deliverBroadcast lifecycle safety', () => {
     expect(sendTemplateMessage).not.toHaveBeenCalled();
   });
 
+  it('stops variant retries when the contact is archived after a recoverable Meta failure', async () => {
+    const active = { data: { recipient_phone: '14155550123' } };
+    const recipientQuery = {
+      select: vi.fn(),
+      eq: vi.fn(),
+      is: vi.fn(),
+      maybeSingle: vi.fn().mockResolvedValueOnce(active).mockResolvedValueOnce(active).mockResolvedValueOnce({ data: null }),
+    };
+    recipientQuery.select.mockReturnValue(recipientQuery);
+    recipientQuery.eq.mockReturnValue(recipientQuery);
+    recipientQuery.is.mockReturnValue(recipientQuery);
+    const broadcastQuery = { update: vi.fn(), eq: vi.fn() };
+    broadcastQuery.update.mockReturnValue(broadcastQuery);
+    broadcastQuery.eq.mockReturnValue(broadcastQuery);
+    const db = {
+      from: vi.fn((table: string) => (table === 'broadcast_recipients' ? recipientQuery : broadcastQuery)),
+    } as unknown as SupabaseClient;
+    const plan: BroadcastPlan = {
+      broadcastId: 'broadcast',
+      templateName: 'promo',
+      templateLanguage: 'en_US',
+      phoneNumberId: 'phone-number',
+      accessToken: 'token',
+      templateRow: null,
+      planned: [{ recipientRowId: 'recipient', params: [] }],
+      rejected: 0,
+    };
+    sendTemplateMessage.mockRejectedValueOnce(new Error('131030: recipient not in allowed list'));
+
+    await deliverBroadcast(db, plan);
+
+    expect(sendTemplateMessage).toHaveBeenCalledOnce();
+    expect(recipientQuery.maybeSingle).toHaveBeenCalledTimes(3);
+  });
+
   it('does not treat a cancelled recipient as a completed send', async () => {
     const query = {
       update: vi.fn(),
