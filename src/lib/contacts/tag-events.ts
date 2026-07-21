@@ -3,7 +3,6 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { type AutomationContext, runAutomationsForTrigger } from '@/lib/automations/engine';
 import { getTagChainDepth, MAX_TAG_CHAIN_DEPTH } from './tag-chain';
 import { addContactTagIfAbsent } from './tag-write';
-
 export { getTagChainDepth, MAX_TAG_CHAIN_DEPTH } from './tag-chain';
 
 interface AddContactTagAndDispatchInput {

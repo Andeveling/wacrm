@@ -236,7 +236,7 @@ function AutomationCard({
   return (
     <li className="rounded-xl border border-border bg-card transition-colors hover:border-border">
       <div className="flex items-center gap-4 p-4">
-        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10" aria-hidden>
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10" aria-hidden>
           <Zap className="h-5 w-5 text-primary" />
         </div>
 
@@ -275,7 +275,7 @@ function AutomationCard({
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="Open menu"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[popup-open]:bg-muted"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-popup-open:bg-muted"
             >
               <MoreVertical className="h-4 w-4" />
             </DropdownMenuTrigger>

@@ -25,11 +25,9 @@ export async function resolveImportTagIds(
     userId: string;
     tagNames: string[];
     canCreateTags: boolean;
-    defaultColor?: string;
   }
 ): Promise<ResolveImportTagsResult> {
   const { accountId, userId, tagNames, canCreateTags } = params;
-  const defaultColor = params.defaultColor ?? DEFAULT_TAG_COLOR;
 
   const uniqueNames: string[] = [];
   const seen = new Set<string>();
@@ -74,7 +72,7 @@ export async function resolveImportTagIds(
           user_id: userId,
           account_id: accountId,
           name,
-          color: defaultColor,
+          color: DEFAULT_TAG_COLOR,
         }))
       )
       .select('id, name');

@@ -51,7 +51,7 @@ export function ContactsTable({
       <Table>
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="w-10">
+            <TableHead className="grid w-10 items-center">
               <Checkbox
                 checked={allOnPageSelected}
                 indeterminate={!allOnPageSelected && someOnPageSelected}
@@ -108,7 +108,7 @@ export function ContactsTable({
                 className="cursor-pointer border-border hover:bg-muted/50"
                 onClick={() => onOpenDetail(contact.id)}
               >
-                <TableCell onClick={(e) => e.stopPropagation()}>
+                <TableCell onClick={(e) => e.stopPropagation()} className="grid w-10 items-center">
                   <Checkbox
                     checked={selectedIds.has(contact.id)}
                     onCheckedChange={() => onSelect(contact.id)}

@@ -31,7 +31,13 @@
         "noDangerouslySetInnerHtml": "off"
       },
       "nursery": {
-        "useSortedClasses": "warn"
+        "useSortedClasses": {
+          "level": "warn",
+          "fix": "safe",
+          "options": {
+            "functions": ["cn", "clsx", "cva", "tw"]
+          }
+        }
       }
     }
   },
