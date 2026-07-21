@@ -51,6 +51,15 @@ describe('public contact lifecycle', () => {
     expect(await second.json()).toEqual({ data: { id: 'contact-1', archived: true } });
   });
 
+  it('keeps repeated restore operations successful', async () => {
+    const first = await POST(new Request('https://crm.test'), params);
+    const second = await POST(new Request('https://crm.test'), params);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual({ data: { id: 'contact-1', restored: true } });
+  });
+
   it('returns generic lifecycle errors for archive and restore failures', async () => {
     rpc.mockResolvedValue({ error: new Error('database failure') });
 

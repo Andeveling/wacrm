@@ -11,7 +11,13 @@ vi.mock('@/lib/whatsapp/encryption', () => ({ decrypt: () => 'token' }));
 
 import { POST } from './route';
 
-function contactDb({ conversationArchived = false, archivedAtFinalCheck = true }: { conversationArchived?: boolean; archivedAtFinalCheck?: boolean } = {}) {
+function contactDb({
+  conversationArchived = false,
+  archivedAtFinalCheck = true,
+}: {
+  conversationArchived?: boolean;
+  archivedAtFinalCheck?: boolean;
+} = {}) {
   const rows: Record<string, unknown> = {
     profiles: { account_id: 'account-1' },
     messages: {

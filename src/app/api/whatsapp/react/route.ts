@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { sendReactionMessage } from '@/lib/whatsapp/meta-api';
 import { sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
-import { SendMessageError, requireEligibleContact } from '@/lib/whatsapp/send-message';
+import { requireEligibleContact, SendMessageError } from '@/lib/whatsapp/send-message';
 
 /**
  * POST /api/whatsapp/react

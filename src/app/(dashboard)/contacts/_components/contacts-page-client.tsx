@@ -11,14 +11,13 @@ import { useCan } from '@/hooks/use-can';
 import type { ContactListView } from '@/lib/contacts/contact-list';
 import { createClient } from '@/lib/supabase/client';
 import type { Contact, ContactTag, Tag } from '@/types';
-
+import { useContactLifecycle } from '../_hooks/use-contact-lifecycle';
+import { useContactSelection } from '../_hooks/use-contact-selection';
 import { ContactsBulkBar } from './contacts-bulk-bar';
 import { ContactsFilters } from './contacts-filters';
 import { ContactsHeader } from './contacts-header';
 import { ContactsPagination } from './contacts-pagination';
 import { ContactsTable } from './contacts-table';
-import { useContactLifecycle } from '../_hooks/use-contact-lifecycle';
-import { useContactSelection } from '../_hooks/use-contact-selection';
 
 export function ContactsPageClient({ view }: { view: ContactListView }) {
   const supabase = createClient();
@@ -46,6 +45,7 @@ export function ContactsPageClient({ view }: { view: ContactListView }) {
   const tagsById = Object.fromEntries(view.tagOptions.map((tag) => [tag.id, tag]));
 
   function navigate(next: { search?: string; tagIds?: string[]; status?: 'active' | 'archived'; page?: number }) {
+    selection.clearSelectedContacts();
     const params = new URLSearchParams(searchParams.toString());
     const search = next.search ?? view.query.search;
     const tagIds = next.tagIds ?? view.query.tagIds;
@@ -137,7 +137,9 @@ export function ContactsPageClient({ view }: { view: ContactListView }) {
           status={view.query.status}
           canEdit={canEdit}
           onClear={selection.clearSelectedContacts}
-          onArchiveOrRestore={() => updateLifecycle(view.query.status === 'active' ? 'archive' : 'restore', [...selection.selectedContactIds])}
+          onArchiveOrRestore={() =>
+            updateLifecycle(view.query.status === 'active' ? 'archive' : 'restore', [...selection.selectedContactIds])
+          }
         />
       )}
 

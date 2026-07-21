@@ -237,4 +237,23 @@ describe('resolveContactIdentity', () => {
     expect(inserts).toEqual([]);
     expect(updates).toEqual([]);
   });
+
+  it('creates one contact for two formats of the same new CSV phone', async () => {
+    const created = {
+      id: 'new',
+      phone: '+14155550123',
+      archived_at: null,
+    };
+    const { db, inserts } = makeDb({ contacts: [null], created });
+
+    await expect(
+      resolveBroadcastCsvContacts(db, {
+        accountId: base.accountId,
+        auditUserId: base.auditUserId,
+        rows: [{ phone: '+1 (415) 555-0123' }, { phone: '14155550123' }],
+      })
+    ).resolves.toEqual({ archivedRowsExcluded: 0, contacts: [created] });
+
+    expect(inserts).toHaveLength(1);
+  });
 });

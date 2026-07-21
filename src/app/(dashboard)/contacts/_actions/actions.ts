@@ -5,10 +5,7 @@ import { requireRole } from '@/lib/auth/account';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export async function updateContactLifecycle(
-  action: 'archive' | 'restore',
-  ids: string[]
-): Promise<{ ok: boolean; failedIds?: string[] }> {
+export async function updateContactLifecycle(action: 'archive' | 'restore', ids: string[]): Promise<{ ok: boolean; failedIds?: string[] }> {
   try {
     const { supabase } = await requireRole('agent');
     const contactIds = [...new Set(ids)];

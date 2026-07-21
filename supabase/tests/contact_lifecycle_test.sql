@@ -1,6 +1,6 @@
 BEGIN;
 
-SELECT plan(65);
+SELECT plan(66);
 
 SELECT ok(
   EXISTS (
@@ -300,6 +300,8 @@ SELECT lives_ok($$ SELECT public.restore_contact('00000000-0000-0000-0000-000000
   'an agent can restore a contact');
 SELECT ok((SELECT archived_at IS NULL FROM contacts WHERE id = '00000000-0000-0000-0000-000000000201'),
   'restore clears the archive timestamp');
+SELECT lives_ok($$ SELECT public.restore_contact('00000000-0000-0000-0000-000000000201') $$,
+  'restore is idempotent');
 SELECT is((SELECT string_agg(status, ',' ORDER BY id) FROM broadcast_recipients WHERE contact_id = '00000000-0000-0000-0000-000000000201'), 'cancelled,sent,delivered,read,replied,failed',
   'restore does not reactivate cancelled work');
 SELECT is(

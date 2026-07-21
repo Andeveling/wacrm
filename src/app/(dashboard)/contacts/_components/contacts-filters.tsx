@@ -7,9 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import type { Tag } from '@/types';
-
 import type { ContactListQuery } from '@/lib/contacts/contact-list-query';
+import type { Tag } from '@/types';
 
 interface ContactsFiltersProps {
   status: ContactListQuery['status'];
