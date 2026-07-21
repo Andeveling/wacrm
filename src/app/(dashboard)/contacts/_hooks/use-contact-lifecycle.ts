@@ -35,7 +35,7 @@ export function useContactLifecycle({
 
       const lifecycleUpdate = await updateContactLifecycle(action, visibleContactIds);
       if (!lifecycleUpdate.ok) {
-        const failedIds = new Set((lifecycleUpdate as { failedIds?: string[] }).failedIds ?? visibleContactIds);
+        const failedIds = new Set(lifecycleUpdate.failedIds ?? visibleContactIds);
         restoreDisplayedContacts?.(contactsBeingUpdated.filter((contact) => failedIds.has(contact.id)));
         toast.error(t('toastLifecycleFailed'));
         return;

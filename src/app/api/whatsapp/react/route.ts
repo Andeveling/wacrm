@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { sendReactionMessage } from '@/lib/whatsapp/meta-api';
 import { sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
+import { SendMessageError, requireEligibleContact } from '@/lib/whatsapp/send-message';
 
 /**
  * POST /api/whatsapp/react
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
 
     const { data: conversation, error: convError } = await supabase
       .from('conversations')
-      .select('id, account_id, contact:contacts(phone, archived_at)')
+      .select('id, account_id, contact:contacts(id, phone, archived_at)')
       .eq('id', targetMessage.conversation_id)
       .eq('account_id', accountId)
       .maybeSingle();
@@ -104,9 +105,15 @@ export async function POST(request: Request) {
     }
 
     const accessToken = decrypt(config.access_token);
-    const sanitizedPhone = sanitizePhoneForMeta(contact.phone);
-
     try {
+      // The conversation join above can be stale if archival races this
+      // request. Keep the final eligibility check at the Meta boundary.
+      const eligibleContact = await requireEligibleContact(supabase, accountId, contact.id);
+      if (!eligibleContact.phone) {
+        return NextResponse.json({ error: 'Contact phone number not found' }, { status: 400 });
+      }
+      const sanitizedPhone = sanitizePhoneForMeta(eligibleContact.phone);
+
       await sendReactionMessage({
         phoneNumberId: config.phone_number_id,
         accessToken,
@@ -115,6 +122,9 @@ export async function POST(request: Request) {
         emoji,
       });
     } catch (err) {
+      if (err instanceof SendMessageError) {
+        return NextResponse.json({ code: err.code, error: err.message }, { status: err.status });
+      }
       const message = err instanceof Error ? err.message : 'Unknown Meta API error';
       console.error('[whatsapp/react] Meta send failed:', message);
       return NextResponse.json({ error: `Meta API error: ${message}` }, { status: 502 });

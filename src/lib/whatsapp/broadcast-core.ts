@@ -250,8 +250,15 @@ export async function deliverBroadcast(db: SupabaseClient, plan: BroadcastPlan):
     const variants = phoneVariants(phone);
     let sentMessageId: string | null = null;
     let lastError: string | null = null;
+    let cancelled = false;
 
     for (const variant of variants) {
+      // A failed variant can leave enough time for archival to commit.
+      // Re-read immediately before every Meta request, not just per row.
+      if (!(await getDeliverableRecipientPhone(db, recipient.recipientRowId))) {
+        cancelled = true;
+        break;
+      }
       try {
         const result = await sendTemplateMessage({
           phoneNumberId: plan.phoneNumberId,
@@ -272,6 +279,8 @@ export async function deliverBroadcast(db: SupabaseClient, plan: BroadcastPlan):
         if (!isRecipientNotAllowedError(message)) break;
       }
     }
+
+    if (cancelled) continue;
 
     if (sentMessageId) {
       if (

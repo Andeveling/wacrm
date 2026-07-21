@@ -180,8 +180,15 @@ export async function POST(request: Request) {
       const variants = phoneVariants(sanitized);
       let sentMessageId: string | null = null;
       let lastError: string | null = null;
+      let cancelled = false;
 
       for (const variant of variants) {
+        // A retry is a new external send. Recheck the recipient row so an
+        // archive that committed after a failed variant wins the race.
+        if (recipient.recipient_id && !(await getDeliverableRecipientPhone(supabase, recipient.recipient_id))) {
+          cancelled = true;
+          break;
+        }
         try {
           const result = await sendTemplateMessage({
             phoneNumberId: config.phone_number_id,
@@ -205,6 +212,16 @@ export async function POST(request: Request) {
           lastError = errorMessage;
           // retry with next variant
         }
+      }
+
+      if (cancelled) {
+        results.push({
+          recipient_id: recipient.recipient_id,
+          phone: recipient.phone,
+          status: 'cancelled',
+          error: 'Recipient is no longer eligible',
+        });
+        continue;
       }
 
       if (sentMessageId) {

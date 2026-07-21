@@ -34,6 +34,24 @@ describe('updateContactLifecycle', () => {
     });
   });
 
+  it('reports only failed contacts from a partial bulk operation', async () => {
+    const otherContactId = '22222222-2222-4222-8222-222222222222';
+    rpc.mockResolvedValueOnce({ error: null }).mockResolvedValueOnce({ error: new Error('Contact not found') });
+
+    await expect(updateContactLifecycle('archive', [contactId, otherContactId])).resolves.toEqual({
+      ok: false,
+      failedIds: [otherContactId],
+    });
+    expect(rpc).toHaveBeenCalledTimes(2);
+  });
+
+  it('deduplicates repeated IDs before invoking the idempotent database operation', async () => {
+    await expect(updateContactLifecycle('restore', [contactId, contactId])).resolves.toEqual({ ok: true });
+
+    expect(rpc).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('restore_contact', { p_contact_id: contactId });
+  });
+
   it('does not expose authorization failures to the client', async () => {
     requireRole.mockRejectedValue(new Error('Insufficient role'));
 
