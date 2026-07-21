@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events';
-import {
-  ContactTagWriteError,
-  removeContactTag,
-} from '@/lib/contacts/tag-write';
+import { ContactTagWriteError, removeContactTag } from '@/lib/contacts/tag-write';
 
 function tagWriteErrorResponse(error: ContactTagWriteError): NextResponse {
   return NextResponse.json({ error: error.message }, { status: error.status });
@@ -15,15 +12,10 @@ async function readTagId(request: Request): Promise<string | null> {
   const body = (await request.json().catch(() => null)) as {
     tag_id?: unknown;
   } | null;
-  return typeof body?.tag_id === 'string' && body.tag_id.trim()
-    ? body.tag_id.trim()
-    : null;
+  return typeof body?.tag_id === 'string' && body.tag_id.trim() ? body.tag_id.trim() : null;
 }
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireRole('agent');
     const { id: contactId } = await params;
@@ -48,10 +40,7 @@ export async function POST(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireRole('agent');
     const { id: contactId } = await params;

@@ -1,16 +1,9 @@
 'use client';
 
 import { Shield, SlidersHorizontal } from 'lucide-react';
-
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { useTranslations } from 'next-intl';
 import { CustomFieldsPanel } from '@/components/contacts/custom-fields-manager';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { SettingsChip } from './settings-chip';
 
 /**
@@ -21,7 +14,7 @@ import { SettingsChip } from './settings-chip';
  */
 export function CustomFieldsSettings() {
   const t = useTranslations('Settings.tagsAndFields');
-  
+
   return (
     <Card>
       <CardHeader>
@@ -33,9 +26,7 @@ export function CustomFieldsSettings() {
             {t('adminRole')}
           </SettingsChip>
         </CardTitle>
-        <CardDescription className="text-muted-foreground">
-          {t('fieldsDesc')}
-        </CardDescription>
+        <CardDescription className="text-muted-foreground">{t('fieldsDesc')}</CardDescription>
       </CardHeader>
       <CardContent>
         <CustomFieldsPanel />

@@ -7,11 +7,7 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": [
-      "**",
-      "!!supabase/migrations",
-      "!!public/opus"
-    ]
+    "includes": ["**", "!!supabase/migrations", "!!public/opus", "!!public/*.svg"]
   },
   "formatter": {
     "enabled": true,
@@ -25,9 +21,23 @@
     "enabled": true,
     "rules": {
       "preset": "recommended",
+      "a11y": {
+        "noLabelWithoutControl": "off"
+      },
+      "performance": {
+        "noImgElement": "off"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "off"
+      },
       "nursery": {
         "useSortedClasses": "warn"
       }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "javascript": {

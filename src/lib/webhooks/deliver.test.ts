@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/whatsapp/encryption', () => ({
   decrypt: (s: string) => s,
@@ -41,6 +41,7 @@ function makeDb(rows: Row[], calls: Calls) {
         return b;
       },
       contains: () => Promise.resolve({ data: rows, error: null }),
+      // biome-ignore lint/suspicious/noThenProperty: Supabase's real client is thenable; tests await this builder directly
       then: (resolve: (v: unknown) => unknown) => {
         if (mode === 'update' && id) calls.updates.push({ id, payload });
         return resolve({ data: null, error: null });
@@ -69,12 +70,9 @@ describe('dispatchWebhookEvent', () => {
     vi.stubGlobal('fetch', fetchMock);
     const calls = emptyCalls();
 
-    await dispatchWebhookEvent(
-      makeDb([{ id: 'a', url: 'https://a.test/hook', secret: 's1' }], calls),
-      'acct-1',
-      'message.received',
-      { x: 1 }
-    );
+    await dispatchWebhookEvent(makeDb([{ id: 'a', url: 'https://a.test/hook', secret: 's1' }], calls), 'acct-1', 'message.received', {
+      x: 1,
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, opts] = fetchMock.mock.calls[0];
@@ -92,12 +90,7 @@ describe('dispatchWebhookEvent', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500 } as Response));
     const calls = emptyCalls();
 
-    await dispatchWebhookEvent(
-      makeDb([{ id: 'b', url: 'https://b.test/hook', secret: 's2' }], calls),
-      'acct-1',
-      'message.received',
-      {}
-    );
+    await dispatchWebhookEvent(makeDb([{ id: 'b', url: 'https://b.test/hook', secret: 's2' }], calls), 'acct-1', 'message.received', {});
 
     expect(calls.rpcs[0]).toEqual({
       name: 'record_webhook_failure',
@@ -112,12 +105,7 @@ describe('dispatchWebhookEvent', () => {
     vi.stubGlobal('fetch', fetchMock);
     const calls = emptyCalls();
 
-    await dispatchWebhookEvent(
-      makeDb([{ id: 'c', url: 'https://127.0.0.1/hook', secret: 's3' }], calls),
-      'acct-1',
-      'message.received',
-      {}
-    );
+    await dispatchWebhookEvent(makeDb([{ id: 'c', url: 'https://127.0.0.1/hook', secret: 's3' }], calls), 'acct-1', 'message.received', {});
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(calls.rpcs[0].name).toBe('record_webhook_failure');

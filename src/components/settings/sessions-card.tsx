@@ -1,27 +1,13 @@
 'use client';
 
+import { Loader2, LogOut } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, LogOut } from 'lucide-react';
-
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { useTranslations } from 'next-intl';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { createClient } from '@/lib/supabase/client';
 
 export function SessionsCard() {
   const t = useTranslations('Settings.profile');
@@ -57,16 +43,10 @@ export function SessionsCard() {
             <LogOut className="size-4 text-primary" />
             {t('sessionsTitle')}
           </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            {t('sessionsDesc')}
-          </CardDescription>
+          <CardDescription className="text-muted-foreground">{t('sessionsDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(true)}
-          >
+          <Button type="button" variant="outline" onClick={() => setOpen(true)}>
             <LogOut className="size-4" />
             {t('signOutAll')}
           </Button>
@@ -77,17 +57,10 @@ export function SessionsCard() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t('signOutConfirmTitle')}</DialogTitle>
-            <DialogDescription>
-              {t('signOutConfirmDesc')}
-            </DialogDescription>
+            <DialogDescription>{t('signOutConfirmDesc')}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setOpen(false)}
-              disabled={signingOut}
-            >
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)} disabled={signingOut}>
               {t('cancel')}
             </Button>
             <Button type="button" onClick={onConfirm} disabled={signingOut}>

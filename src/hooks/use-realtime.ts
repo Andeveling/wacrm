@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { useEffect, useRef, useCallback, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import type { Message, Conversation } from "@/types";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import type { Conversation, Message } from '@/types';
 
 interface RealtimeEvent<T> {
-  eventType: "INSERT" | "UPDATE" | "DELETE";
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
   new: T;
   old: Partial<T>;
 }
@@ -18,12 +18,7 @@ interface UseRealtimeOptions {
   enabled?: boolean;
 }
 
-export function useRealtime({
-  channelName,
-  onMessageEvent,
-  onConversationEvent,
-  enabled = true,
-}: UseRealtimeOptions) {
+export function useRealtime({ channelName, onMessageEvent, onConversationEvent, enabled = true }: UseRealtimeOptions) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -46,30 +41,22 @@ export function useRealtime({
 
     const channel = supabase
       .channel(channelName)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "messages" },
-        (payload) => {
-          onMessageRef.current?.({
-            eventType: payload.eventType as RealtimeEvent<Message>["eventType"],
-            new: payload.new as Message,
-            old: payload.old as Partial<Message>,
-          });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "conversations" },
-        (payload) => {
-          onConversationRef.current?.({
-            eventType: payload.eventType as RealtimeEvent<Conversation>["eventType"],
-            new: payload.new as Conversation,
-            old: payload.old as Partial<Conversation>,
-          });
-        }
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (payload) => {
+        onMessageRef.current?.({
+          eventType: payload.eventType as RealtimeEvent<Message>['eventType'],
+          new: payload.new as Message,
+          old: payload.old as Partial<Message>,
+        });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'conversations' }, (payload) => {
+        onConversationRef.current?.({
+          eventType: payload.eventType as RealtimeEvent<Conversation>['eventType'],
+          new: payload.new as Conversation,
+          old: payload.old as Partial<Conversation>,
+        });
+      })
       .subscribe((status) => {
-        setIsConnected(status === "SUBSCRIBED");
+        setIsConnected(status === 'SUBSCRIBED');
       });
 
     channelRef.current = channel;

@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
 interface ContactsPaginationProps {
   page: number;
@@ -16,24 +16,15 @@ interface ContactsPaginationProps {
   onNext: () => void;
 }
 
-export function ContactsPagination({
-  page,
-  totalPages,
-  totalCount,
-  pageSize,
-  hasPrev,
-  hasNext,
-  onPrev,
-  onNext,
-}: ContactsPaginationProps) {
-  const t = useTranslations("Contacts.page");
+export function ContactsPagination({ page, totalPages, totalCount, pageSize, hasPrev, hasNext, onPrev, onNext }: ContactsPaginationProps) {
+  const t = useTranslations('Contacts.page');
 
   if (totalPages <= 1) return null;
 
   return (
     <div className="flex items-center justify-between">
-      <p className="text-xs text-muted-foreground">
-        {t("showingPagination", {
+      <p className="text-muted-foreground text-xs">
+        {t('showingPagination', {
           start: page * pageSize + 1,
           end: Math.min((page + 1) * pageSize, totalCount),
           total: totalCount,
@@ -49,9 +40,7 @@ export function ContactsPagination({
         >
           <ChevronLeft className="size-4" />
         </Button>
-        <span className="text-xs text-muted-foreground px-2">
-          {t("pageCount", { page: page + 1, total: totalPages })}
-        </span>
+        <span className="px-2 text-muted-foreground text-xs">{t('pageCount', { page: page + 1, total: totalPages })}</span>
         <Button
           variant="outline"
           size="icon-sm"

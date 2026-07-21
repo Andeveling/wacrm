@@ -35,8 +35,7 @@ function archivedContactDb() {
     from: vi.fn((table: string) => {
       const result = { data: rows[table] ?? null, error: null };
       const builder: Record<string, unknown> = {};
-      for (const method of ['select', 'eq'])
-        builder[method] = vi.fn(() => builder);
+      for (const method of ['select', 'eq']) builder[method] = vi.fn(() => builder);
       builder.maybeSingle = vi.fn().mockResolvedValue(result);
       return builder;
     }),

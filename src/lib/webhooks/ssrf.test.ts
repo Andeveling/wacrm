@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { isPrivateOrReservedIp, isDeliverableUrl } from './ssrf';
+import { describe, expect, it } from 'vitest';
+import { isDeliverableUrl, isPrivateOrReservedIp } from './ssrf';
 
 describe('isPrivateOrReservedIp', () => {
   it('flags loopback / private / link-local / CGNAT IPv4', () => {

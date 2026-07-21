@@ -25,8 +25,7 @@ export default function NewBroadcastPage() {
   const router = useRouter();
   const t = useTranslations('Broadcasts.new');
   const { accountId } = useAuth();
-  const { createAndSendBroadcast, isProcessing, progress } =
-    useBroadcastSending();
+  const { createAndSendBroadcast, isProcessing, progress } = useBroadcastSending();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [template, setTemplate] = useState<MessageTemplate | null>(null);
@@ -41,9 +40,7 @@ export default function NewBroadcastPage() {
     csvContacts?: { phone: string; name?: string }[];
     excludeTagIds?: string[];
   }>({ type: 'all' });
-  const [variables, setVariables] = useState<
-    Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>
-  >({});
+  const [variables, setVariables] = useState<Record<string, { type: 'static' | 'field' | 'custom_field'; value: string }>>({});
   const [headerMediaUrl, setHeaderMediaUrl] = useState('');
   const [name, setName] = useState('');
 
@@ -51,24 +48,21 @@ export default function NewBroadcastPage() {
     if (!template) return;
 
     try {
-      const { id: broadcastId, archivedCsvRowsExcluded } =
-        await createAndSendBroadcast({
-          name,
-          template,
-          audience: {
-            type: audience.type,
-            tagIds: audience.tagIds,
-            customField: audience.customField,
-            csvContacts: audience.csvContacts,
-            excludeTagIds: audience.excludeTagIds,
-          },
-          variables,
-          headerMediaUrl,
-        });
+      const { id: broadcastId, archivedCsvRowsExcluded } = await createAndSendBroadcast({
+        name,
+        template,
+        audience: {
+          type: audience.type,
+          tagIds: audience.tagIds,
+          customField: audience.customField,
+          csvContacts: audience.csvContacts,
+          excludeTagIds: audience.excludeTagIds,
+        },
+        variables,
+        headerMediaUrl,
+      });
       if (archivedCsvRowsExcluded > 0) {
-        toast.info(
-          t('toastArchivedCsvExcluded', { count: archivedCsvRowsExcluded })
-        );
+        toast.info(t('toastArchivedCsvExcluded', { count: archivedCsvRowsExcluded }));
       }
       router.push(`/broadcasts/${broadcastId}`);
     } catch (err) {
@@ -140,8 +134,8 @@ export default function NewBroadcastPage() {
     <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t('subtitle')}</p>
+        <h1 className="font-bold text-2xl text-foreground">{t('title')}</h1>
+        <p className="mt-1 text-muted-foreground text-sm">{t('subtitle')}</p>
       </div>
 
       {/* Step Indicator */}
@@ -154,7 +148,7 @@ export default function NewBroadcastPage() {
             <div key={step.key} className="flex flex-1 items-center">
               <div className="flex items-center gap-2">
                 <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all ${
+                  className={`flex h-8 w-8 items-center justify-center rounded-full font-medium text-xs transition-all ${
                     isCompleted
                       ? 'bg-primary text-primary-foreground'
                       : isActive
@@ -165,24 +159,14 @@ export default function NewBroadcastPage() {
                   {isCompleted ? <Check className="h-4 w-4" /> : index + 1}
                 </div>
                 <span
-                  className={`hidden text-sm font-medium sm:block ${
-                    isActive
-                      ? 'text-foreground'
-                      : isCompleted
-                        ? 'text-primary'
-                        : 'text-muted-foreground'
+                  className={`hidden font-medium text-sm sm:block ${
+                    isActive ? 'text-foreground' : isCompleted ? 'text-primary' : 'text-muted-foreground'
                   }`}
                 >
                   {t(`steps.${step.label}`)}
                 </span>
               </div>
-              {index < steps.length - 1 && (
-                <div
-                  className={`mx-3 h-px flex-1 ${
-                    index < currentStep ? 'bg-primary' : 'bg-muted'
-                  }`}
-                />
-              )}
+              {index < steps.length - 1 && <div className={`mx-3 h-px flex-1 ${index < currentStep ? 'bg-primary' : 'bg-muted'}`} />}
             </div>
           );
         })}

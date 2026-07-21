@@ -1,0 +1,17 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "references": {
+    "triage-labels": {
+      "path": "../docs/agents/triage-labels.md",
+      "description": "Aca verificas los labels que podemos usar en el ticket tracker presente"
+    },
+    "ticket-tracker": {
+      "path": "../docs/agents/issue-tracker.md",
+      "description": "Aca revisas donde y como debemos crear las issues local | github | gitlab etc.."
+    },
+    "domain": {
+      "path": "../docs/agents/domain.md",
+      "description": "How the engineering skills should consume this repo's domain documentation when exploring the codebase."
+    }
+  }
+}

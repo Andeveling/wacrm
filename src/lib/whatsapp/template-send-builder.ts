@@ -69,10 +69,7 @@ type MetaSendParameter =
   | { type: 'coupon_code'; coupon_code: string }
   | { type: 'payload'; payload: string };
 
-function buildHeaderComponent(
-  template: MessageTemplate,
-  params: SendTimeParams,
-): MetaSendComponent | null {
+function buildHeaderComponent(template: MessageTemplate, params: SendTimeParams): MetaSendComponent | null {
   const headerType = template.header_type;
   if (!headerType) return null;
 
@@ -83,10 +80,8 @@ function buildHeaderComponent(
     const varCount = extractVariableIndices(template.header_content ?? '').length;
     if (varCount === 0) return null;
     const value = params.headerText;
-    if (!value || !value.trim()) {
-      throw new Error(
-        'Header text variable {{1}} requires a value — pass headerText.',
-      );
+    if (!value?.trim()) {
+      throw new Error('Header text variable {{1}} requires a value — pass headerText.');
     }
     return {
       type: 'header',
@@ -107,7 +102,7 @@ function buildHeaderComponent(
   const id = params.headerMediaId;
   if (!link && !id) {
     throw new Error(
-      `${headerType} header requires a media link or id at send time — set header_media_url on the template or pass headerMediaUrl/headerMediaId.`,
+      `${headerType} header requires a media link or id at send time — set header_media_url on the template or pass headerMediaUrl/headerMediaId.`
     );
   }
   const mediaPayload: { link?: string; id?: string } = id ? { id } : { link };
@@ -123,17 +118,12 @@ function buildHeaderComponent(
   };
 }
 
-function buildBodyComponent(
-  template: MessageTemplate,
-  params: SendTimeParams,
-): MetaSendComponent | null {
+function buildBodyComponent(template: MessageTemplate, params: SendTimeParams): MetaSendComponent | null {
   const varCount = extractVariableIndices(template.body_text).length;
   const body = params.body ?? [];
   if (varCount === 0 && body.length === 0) return null;
   if (body.length < varCount) {
-    throw new Error(
-      `Body has ${varCount} variable(s) but only ${body.length} value(s) were supplied.`,
-    );
+    throw new Error(`Body has ${varCount} variable(s) but only ${body.length} value(s) were supplied.`);
   }
   // Trim to the variable count — extra values are dropped silently so
   // a legacy caller that passes too many doesn't error out.
@@ -144,10 +134,7 @@ function buildBodyComponent(
   };
 }
 
-function buttonNeedsSendParam(
-  button: TemplateButton,
-  override: string | undefined,
-): boolean {
+function buttonNeedsSendParam(button: TemplateButton, override: string | undefined): boolean {
   switch (button.type) {
     case 'URL':
       return extractVariableIndices(button.url).length > 0;
@@ -162,21 +149,15 @@ function buttonNeedsSendParam(
   }
 }
 
-function buildButtonComponent(
-  button: TemplateButton,
-  index: number,
-  override: string | undefined,
-): MetaSendComponent | null {
+function buildButtonComponent(button: TemplateButton, index: number, override: string | undefined): MetaSendComponent | null {
   if (!buttonNeedsSendParam(button, override)) return null;
 
   switch (button.type) {
     case 'URL': {
       // Each URL button is its own component with sub_type=url and
       // the button's index in the template's buttons array.
-      if (!override || !override.trim()) {
-        throw new Error(
-          `URL button #${index + 1} uses {{1}} — requires a buttonParams[${index}] value.`,
-        );
+      if (!override?.trim()) {
+        throw new Error(`URL button #${index + 1} uses {{1}} — requires a buttonParams[${index}] value.`);
       }
       return {
         type: 'button',
@@ -201,7 +182,7 @@ function buildButtonComponent(
         type: 'button',
         sub_type: 'quick_reply',
         index: String(index),
-        parameters: [{ type: 'payload', payload: override! }],
+        parameters: [{ type: 'payload', payload: override as string }],
       };
     }
     case 'PHONE_NUMBER':
@@ -216,10 +197,7 @@ function buildButtonComponent(
  * Returns an empty array when the template is fully static (no
  * variables, no media header), which is a valid Meta request.
  */
-export function buildSendComponents(
-  template: MessageTemplate,
-  params: SendTimeParams = {},
-): MetaSendComponent[] {
+export function buildSendComponents(template: MessageTemplate, params: SendTimeParams = {}): MetaSendComponent[] {
   const out: MetaSendComponent[] = [];
   const header = buildHeaderComponent(template, params);
   if (header) out.push(header);

@@ -1,36 +1,16 @@
-"use client";
+'use client';
 
-import {
-  Archive,
-  Loader2,
-  MoreHorizontal,
-  Pencil,
-  Plus,
-  RotateCcw,
-  Users,
-} from "lucide-react";
-import { useTranslations } from "next-intl";
+import { Archive, Loader2, MoreHorizontal, Pencil, Plus, RotateCcw, Users } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { GatedButton } from "@/components/ui/gated-button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import type { Contact } from "@/types";
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { GatedButton } from '@/components/ui/gated-button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { Contact } from '@/types';
 
-import type { ContactStatus, ContactWithTags } from "../_hooks/use-contacts";
+import type { ContactStatus, ContactWithTags } from '../_hooks/use-contacts';
 
 interface ContactsTableProps {
   contacts: ContactWithTags[];
@@ -61,14 +41,13 @@ export function ContactsTable({
   onArchiveOrRestore,
   onAdd,
 }: ContactsTableProps) {
-  const t = useTranslations("Contacts.page");
+  const t = useTranslations('Contacts.page');
 
-  const allOnPageSelected =
-    contacts.length > 0 && contacts.every((c) => selectedIds.has(c.id));
+  const allOnPageSelected = contacts.length > 0 && contacts.every((c) => selectedIds.has(c.id));
   const someOnPageSelected = contacts.some((c) => selectedIds.has(c.id));
 
   return (
-    <div className="rounded-lg border border-border overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-border">
       <Table>
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
@@ -81,49 +60,31 @@ export function ContactsTable({
                 aria-label="Select all contacts on this page"
               />
             </TableHead>
-            <TableHead className="text-muted-foreground">
-              {t("tableColumns.name")}
-            </TableHead>
-            <TableHead className="text-muted-foreground">
-              {t("tableColumns.phone")}
-            </TableHead>
-            <TableHead className="text-muted-foreground hidden md:table-cell">
-              {t("tableColumns.email")}
-            </TableHead>
-            <TableHead className="text-muted-foreground hidden lg:table-cell">
-              {t("tableColumns.company")}
-            </TableHead>
-            <TableHead className="text-muted-foreground hidden md:table-cell">
-              {t("tableColumns.tags")}
-            </TableHead>
-            <TableHead className="text-muted-foreground hidden lg:table-cell">
-              {t("tableColumns.createdAt")}
-            </TableHead>
-            <TableHead className="text-muted-foreground w-12" />
+            <TableHead className="text-muted-foreground">{t('tableColumns.name')}</TableHead>
+            <TableHead className="text-muted-foreground">{t('tableColumns.phone')}</TableHead>
+            <TableHead className="hidden text-muted-foreground md:table-cell">{t('tableColumns.email')}</TableHead>
+            <TableHead className="hidden text-muted-foreground lg:table-cell">{t('tableColumns.company')}</TableHead>
+            <TableHead className="hidden text-muted-foreground md:table-cell">{t('tableColumns.tags')}</TableHead>
+            <TableHead className="hidden text-muted-foreground lg:table-cell">{t('tableColumns.createdAt')}</TableHead>
+            <TableHead className="w-12 text-muted-foreground" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow className="border-border">
-              <TableCell colSpan={8} className="text-center py-12">
+              <TableCell colSpan={8} className="py-12 text-center">
                 <div className="flex flex-col items-center gap-2">
                   <Loader2 className="size-6 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    {t("loading")}
-                  </p>
+                  <p className="text-muted-foreground text-sm">{t('loading')}</p>
                 </div>
               </TableCell>
             </TableRow>
           ) : contacts.length === 0 ? (
             <TableRow className="border-border">
-              <TableCell colSpan={8} className="text-center py-12">
+              <TableCell colSpan={8} className="py-12 text-center">
                 <div className="flex flex-col items-center gap-2">
                   <Users className="size-8 text-muted-foreground" />
-                  <p className="text-sm text-muted-foreground">
-                    {hasActiveFilters
-                      ? t("noContactsMatch")
-                      : t("noContactsYet")}
-                  </p>
+                  <p className="text-muted-foreground text-sm">{hasActiveFilters ? t('noContactsMatch') : t('noContactsYet')}</p>
                   {!hasActiveFilters && (
                     <GatedButton
                       canAct={canEdit}
@@ -134,7 +95,7 @@ export function ContactsTable({
                       className="mt-2 border-border text-muted-foreground hover:bg-muted"
                     >
                       <Plus className="size-3.5" />
-                      {t("addFirstContact")}
+                      {t('addFirstContact')}
                     </GatedButton>
                   )}
                 </div>
@@ -144,7 +105,7 @@ export function ContactsTable({
             contacts.map((contact) => (
               <TableRow
                 key={contact.id}
-                className="border-border hover:bg-muted/50 cursor-pointer"
+                className="cursor-pointer border-border hover:bg-muted/50"
                 onClick={() => onOpenDetail(contact.id)}
               >
                 <TableCell onClick={(e) => e.stopPropagation()}>
@@ -154,25 +115,15 @@ export function ContactsTable({
                     aria-label={`Select ${contact.name || contact.phone}`}
                   />
                 </TableCell>
-                <TableCell className="text-foreground font-medium">
-                  {contact.name || (
-                    <span className="text-muted-foreground italic">
-                      {t("unnamed")}
-                    </span>
-                  )}
+                <TableCell className="font-medium text-foreground">
+                  {contact.name || <span className="text-muted-foreground italic">{t('unnamed')}</span>}
                 </TableCell>
-                <TableCell className="text-muted-foreground font-mono text-xs">
-                  {contact.phone}
+                <TableCell className="font-mono text-muted-foreground text-xs">{contact.phone}</TableCell>
+                <TableCell className="hidden text-muted-foreground text-sm md:table-cell">
+                  {contact.email || <span className="text-muted-foreground">-</span>}
                 </TableCell>
-                <TableCell className="text-muted-foreground hidden md:table-cell text-sm">
-                  {contact.email || (
-                    <span className="text-muted-foreground">-</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground hidden lg:table-cell text-sm">
-                  {contact.company || (
-                    <span className="text-muted-foreground">-</span>
-                  )}
+                <TableCell className="hidden text-muted-foreground text-sm lg:table-cell">
+                  {contact.company || <span className="text-muted-foreground">-</span>}
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   <div className="flex flex-wrap gap-1">
@@ -180,9 +131,9 @@ export function ContactsTable({
                       contact.tags.slice(0, 3).map((tag) => (
                         <span
                           key={tag.id}
-                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          className="inline-flex items-center rounded-full px-2 py-0.5 font-medium text-[10px]"
                           style={{
-                            backgroundColor: tag.color + "20",
+                            backgroundColor: `${tag.color}20`,
                             color: tag.color,
                           }}
                         >
@@ -193,17 +144,15 @@ export function ContactsTable({
                       <span className="text-muted-foreground text-xs">-</span>
                     )}
                     {contact.tags && contact.tags.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        +{contact.tags.length - 3}
-                      </span>
+                      <span className="text-[10px] text-muted-foreground">+{contact.tags.length - 3}</span>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground text-xs hidden lg:table-cell">
-                  {new Date(contact.created_at).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
+                <TableCell className="hidden text-muted-foreground text-xs lg:table-cell">
+                  {new Date(contact.created_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
                   })}
                 </TableCell>
                 <TableCell>
@@ -220,10 +169,7 @@ export function ContactsTable({
                     >
                       <MoreHorizontal className="size-4" />
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="bg-popover border-border"
-                    >
+                    <DropdownMenuContent align="end" className="border-border bg-popover">
                       <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
@@ -232,7 +178,7 @@ export function ContactsTable({
                         className="text-popover-foreground focus:bg-muted focus:text-foreground"
                       >
                         <Pencil className="size-4" />
-                        {t("editAction")}
+                        {t('editAction')}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={(e) => {
@@ -240,16 +186,8 @@ export function ContactsTable({
                           onArchiveOrRestore(contact.id);
                         }}
                       >
-                        {status === "active" ? (
-                          <Archive className="size-4" />
-                        ) : (
-                          <RotateCcw className="size-4" />
-                        )}
-                        {t(
-                          status === "active"
-                            ? "archiveAction"
-                            : "restoreAction",
-                        )}
+                        {status === 'active' ? <Archive className="size-4" /> : <RotateCcw className="size-4" />}
+                        {t(status === 'active' ? 'archiveAction' : 'restoreAction')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

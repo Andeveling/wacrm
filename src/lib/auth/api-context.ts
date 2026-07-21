@@ -28,12 +28,11 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-import { supabaseAdmin } from '@/lib/flows/admin-client';
-import { findActiveKeyByHash, touchLastUsed } from '@/lib/api-keys/store';
-import { hashApiKey, looksLikeApiKey } from '@/lib/api-keys/keys';
-import { hasScope, type ApiScope } from '@/lib/api-keys/scopes';
 import { forbidden, rateLimited, unauthorized } from '@/lib/api/v1/respond';
+import { hashApiKey, looksLikeApiKey } from '@/lib/api-keys/keys';
+import { type ApiScope, hasScope } from '@/lib/api-keys/scopes';
+import { findActiveKeyByHash, touchLastUsed } from '@/lib/api-keys/store';
+import { supabaseAdmin } from '@/lib/flows/admin-client';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/rate-limit';
 
 export interface ApiKeyContext {
@@ -59,9 +58,7 @@ export interface ApiKeyContext {
 function extractKey(request: Request): string | null {
   const header = request.headers.get('authorization');
   if (!header) return null;
-  const value = header.startsWith('Bearer ')
-    ? header.slice('Bearer '.length).trim()
-    : header.trim();
+  const value = header.startsWith('Bearer ') ? header.slice('Bearer '.length).trim() : header.trim();
   return value.length > 0 ? value : null;
 }
 
@@ -77,10 +74,7 @@ function extractKey(request: Request): string | null {
  * On success, bumps `last_used_at` (fire-and-forget) and returns the
  * account context.
  */
-export async function requireApiKey(
-  request: Request,
-  scope?: ApiScope
-): Promise<ApiKeyContext> {
+export async function requireApiKey(request: Request, scope?: ApiScope): Promise<ApiKeyContext> {
   const presented = extractKey(request);
   if (!presented || !looksLikeApiKey(presented)) {
     throw unauthorized();

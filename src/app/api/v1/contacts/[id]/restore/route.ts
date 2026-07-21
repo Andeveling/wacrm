@@ -1,11 +1,8 @@
-import { requireApiKey } from '@/lib/auth/api-context';
-import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { getContactById } from '@/lib/api/v1/contacts';
+import { fail, ok, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { requireApiKey } from '@/lib/auth/api-context';
 
-export async function POST(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireApiKey(request, 'contacts:write');
     const { id } = await params;

@@ -1,20 +1,14 @@
 'use client';
 
+import { BookOpen, Loader2, Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Plus, Trash2, Pencil, RefreshCw, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { useTranslations } from 'next-intl';
 
 interface DocSummary {
   id: string;
@@ -56,7 +50,7 @@ export function AiKnowledgeCard({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!accountId || loadedAccountIdRef.current === accountId) return;
@@ -100,14 +94,11 @@ export function AiKnowledgeCard({
     setSaving(true);
     try {
       const isNew = editing === 'new';
-      const res = await fetch(
-        isNew ? '/api/ai/knowledge' : `/api/ai/knowledge/${editing}`,
-        {
-          method: isNew ? 'POST' : 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ title: title.trim(), content: content.trim() }),
-        },
-      );
+      const res = await fetch(isNew ? '/api/ai/knowledge' : `/api/ai/knowledge/${editing}`, {
+        method: isNew ? 'POST' : 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: title.trim(), content: content.trim() }),
+      });
       const data = await res.json();
       if (res.ok) {
         // A 200 with `warning` means saved but indexing degraded.
@@ -165,42 +156,27 @@ export function AiKnowledgeCard({
         </CardTitle>
         <CardDescription>
           {t('description', {
-            searchType: hasEmbeddingsKey ? t('semanticSearchOn') : t('keywordSearchOn')
+            searchType: hasEmbeddingsKey ? t('semanticSearchOn') : t('keywordSearchOn'),
           })}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
-          <div className="flex items-center py-4 text-sm text-muted-foreground">
+          <div className="flex items-center py-4 text-muted-foreground text-sm">
             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t('loading')}
           </div>
         ) : (
           <>
-            {docs.length === 0 && editing === null && (
-              <p className="text-sm text-muted-foreground">
-                {t('noDocs')}
-              </p>
-            )}
+            {docs.length === 0 && editing === null && <p className="text-muted-foreground text-sm">{t('noDocs')}</p>}
 
             {docs.length > 0 && (
               <ul className="divide-y divide-border rounded-md border border-border">
                 {docs.map((doc) => (
-                  <li
-                    key={doc.id}
-                    className="flex items-center justify-between gap-2 px-3 py-2"
-                  >
-                    <span className="min-w-0 truncate text-sm text-foreground">
-                      {doc.title}
-                    </span>
+                  <li key={doc.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                    <span className="min-w-0 truncate text-foreground text-sm">{doc.title}</span>
                     {canEdit && (
                       <span className="flex shrink-0 gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => void openEdit(doc.id)}
-                          title="Edit"
-                        >
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => void openEdit(doc.id)} title="Edit">
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
@@ -259,18 +235,8 @@ export function AiKnowledgeCard({
                     <Plus className="mr-2 h-4 w-4" /> {t('addDoc')}
                   </Button>
                   {hasEmbeddingsKey && docs.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={reindex}
-                      disabled={reindexing}
-                      title={t('reindexTooltip')}
-                    >
-                      {reindexing ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                      )}
+                    <Button variant="ghost" size="sm" onClick={reindex} disabled={reindexing} title={t('reindexTooltip')}>
+                      {reindexing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                       {t('reindex')}
                     </Button>
                   )}

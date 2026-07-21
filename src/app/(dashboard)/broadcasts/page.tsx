@@ -1,23 +1,16 @@
 'use client';
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { Loader2, Plus, Radio } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Broadcast } from '@/types';
-import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Radio, Plus, Loader2 } from 'lucide-react';
-import { useCan } from '@/hooks/use-can';
-import { GatedButton } from '@/components/ui/gated-button';
-import { getBroadcastStatus } from '@/lib/broadcast-status';
 import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { GatedButton } from '@/components/ui/gated-button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useCan } from '@/hooks/use-can';
+import { getBroadcastStatus } from '@/lib/broadcast-status';
+import { createClient } from '@/lib/supabase/client';
+import type { Broadcast } from '@/types';
 
 /**
  * Poll cadence while any broadcast is sending. Kept modest so we don't
@@ -44,14 +37,9 @@ function RateCell({
   const pct = percent(value, total);
   return (
     <div className="flex items-center gap-2">
-      <span className="w-10 text-right text-xs tabular-nums text-muted-foreground">
-        {pct}%
-      </span>
+      <span className="w-10 text-right text-muted-foreground text-xs tabular-nums">{pct}%</span>
       <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
-        <div
-          className={`h-1.5 rounded-full ${color}`}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
     </div>
   );
@@ -69,13 +57,10 @@ export default function BroadcastsPage() {
   // Used to kick off polling only while something is actively sending.
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  async function fetchBroadcasts() {
+  const fetchBroadcasts = useCallback(async () => {
     try {
       const supabase = createClient();
-      const { data, error: fetchError } = await supabase
-        .from('broadcasts')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error: fetchError } = await supabase.from('broadcasts').select('*').order('created_at', { ascending: false });
 
       if (fetchError) throw fetchError;
       setBroadcasts(data ?? []);
@@ -84,16 +69,13 @@ export default function BroadcastsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [t]);
 
   useEffect(() => {
     fetchBroadcasts();
-  }, []);
+  }, [fetchBroadcasts]);
 
-  const anySending = useMemo(
-    () => broadcasts.some((b) => b.status === 'sending'),
-    [broadcasts],
-  );
+  const anySending = useMemo(() => broadcasts.some((b) => b.status === 'sending'), [broadcasts]);
 
   useEffect(() => {
     function startPolling() {
@@ -129,7 +111,7 @@ export default function BroadcastsPage() {
       stopPolling();
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [anySending]);
+  }, [anySending, fetchBroadcasts]);
 
   if (loading) {
     return (
@@ -142,7 +124,7 @@ export default function BroadcastsPage() {
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-red-400">{error}</p>
+        <p className="text-red-400 text-sm">{error}</p>
         <Button variant="outline" onClick={() => window.location.reload()}>
           {t('retry')}
         </Button>
@@ -182,10 +164,8 @@ export default function BroadcastsPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('subtitle')}
-          </p>
+          <h1 className="font-bold text-2xl text-foreground">{t('title')}</h1>
+          <p className="mt-1 text-muted-foreground text-sm">{t('subtitle')}</p>
         </div>
         <GatedButton
           canAct={canCreate}
@@ -201,10 +181,8 @@ export default function BroadcastsPage() {
       {broadcasts.length === 0 ? (
         <div className="flex h-64 flex-col items-center justify-center rounded-xl border border-border bg-card">
           <Radio className="mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm font-medium text-foreground">{t('noBroadcastsYet')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t('createFirst')}
-          </p>
+          <p className="font-medium text-foreground text-sm">{t('noBroadcastsYet')}</p>
+          <p className="mt-1 text-muted-foreground text-xs">{t('createFirst')}</p>
           <GatedButton
             canAct={canCreate}
             gateReason="create broadcasts"
@@ -222,9 +200,7 @@ export default function BroadcastsPage() {
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-muted-foreground">{t('table.name')}</TableHead>
                 <TableHead className="hidden text-muted-foreground md:table-cell">{t('table.template')}</TableHead>
-                <TableHead className="hidden text-right text-muted-foreground sm:table-cell">
-                  {t('table.recipients')}
-                </TableHead>
+                <TableHead className="hidden text-right text-muted-foreground sm:table-cell">{t('table.recipients')}</TableHead>
                 <TableHead className="hidden text-muted-foreground lg:table-cell">{t('table.delivery')}</TableHead>
                 <TableHead className="hidden text-muted-foreground lg:table-cell">{t('table.read')}</TableHead>
                 <TableHead className="text-muted-foreground">{t('table.status')}</TableHead>
@@ -240,32 +216,20 @@ export default function BroadcastsPage() {
                     className="cursor-pointer border-border hover:bg-muted/50"
                     onClick={() => router.push(`/broadcasts/${broadcast.id}`)}
                   >
-                    <TableCell className="font-medium text-foreground">
-                      {broadcast.name}
-                    </TableCell>
-                    <TableCell className="hidden text-muted-foreground md:table-cell">
-                      {broadcast.template_name}
-                    </TableCell>
+                    <TableCell className="font-medium text-foreground">{broadcast.name}</TableCell>
+                    <TableCell className="hidden text-muted-foreground md:table-cell">{broadcast.template_name}</TableCell>
                     <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
                       {broadcast.total_recipients}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <RateCell
-                        value={broadcast.delivered_count}
-                        total={broadcast.total_recipients}
-                        color="bg-primary"
-                      />
+                      <RateCell value={broadcast.delivered_count} total={broadcast.total_recipients} color="bg-primary" />
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <RateCell
-                        value={broadcast.read_count}
-                        total={broadcast.total_recipients}
-                        color="bg-blue-500"
-                      />
+                      <RateCell value={broadcast.read_count} total={broadcast.total_recipients} color="bg-blue-500" />
                     </TableCell>
                     <TableCell>
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs font-medium ${status.classes}`}
+                        className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 font-medium text-xs ${status.classes}`}
                       >
                         {status.pulse && (
                           <span className="relative flex h-1.5 w-1.5">

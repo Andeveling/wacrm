@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('@/lib/whatsapp/encryption', () => ({
   decrypt: () => 'token',
@@ -7,11 +7,7 @@ vi.mock('@/lib/whatsapp/encryption', () => ({
   isLegacyFormat: () => false,
 }));
 
-import {
-  sendMessageToConversation,
-  SendMessageError,
-  type SendMessageParams,
-} from './send-message';
+import { SendMessageError, type SendMessageParams, sendMessageToConversation } from './send-message';
 
 // A db that explodes if touched — these tests cover the param
 // validation that MUST short-circuit before any query runs.
@@ -63,20 +59,12 @@ function archivedContactDb(): SupabaseClient {
   } as unknown as SupabaseClient;
 }
 
-async function expectSendError(
-  params: SendMessageParams,
-  status: number,
-  messageMatch?: RegExp
-) {
-  await expect(
-    sendMessageToConversation(noDb(), 'acct-1', params)
-  ).rejects.toBeInstanceOf(SendMessageError);
-  await sendMessageToConversation(noDb(), 'acct-1', params).catch(
-    (e: SendMessageError) => {
-      expect(e.status).toBe(status);
-      if (messageMatch) expect(e.message).toMatch(messageMatch);
-    }
-  );
+async function expectSendError(params: SendMessageParams, status: number, messageMatch?: RegExp) {
+  await expect(sendMessageToConversation(noDb(), 'acct-1', params)).rejects.toBeInstanceOf(SendMessageError);
+  await sendMessageToConversation(noDb(), 'acct-1', params).catch((e: SendMessageError) => {
+    expect(e.status).toBe(status);
+    if (messageMatch) expect(e.message).toMatch(messageMatch);
+  });
 }
 
 describe('sendMessageToConversation — param validation (pre-DB)', () => {
@@ -88,36 +76,20 @@ describe('sendMessageToConversation — param validation (pre-DB)', () => {
   });
 
   it('rejects an unsupported message_type', async () => {
-    await expectSendError(
-      { ...base, messageType: 'carrier-pigeon' },
-      400,
-      /Unsupported message_type/
-    );
+    await expectSendError({ ...base, messageType: 'carrier-pigeon' }, 400, /Unsupported message_type/);
   });
 
   it('requires content_text for text messages', async () => {
-    await expectSendError(
-      { ...base, messageType: 'text' },
-      400,
-      /content_text is required/
-    );
+    await expectSendError({ ...base, messageType: 'text' }, 400, /content_text is required/);
   });
 
   it('requires template_name for template messages', async () => {
-    await expectSendError(
-      { ...base, messageType: 'template' },
-      400,
-      /template_name is required/
-    );
+    await expectSendError({ ...base, messageType: 'template' }, 400, /template_name is required/);
   });
 
   it('requires media_url for media kinds', async () => {
     for (const kind of ['image', 'video', 'document', 'audio']) {
-      await expectSendError(
-        { ...base, messageType: kind },
-        400,
-        /media_url is required/
-      );
+      await expectSendError({ ...base, messageType: kind }, 400, /media_url is required/);
     }
   });
 
@@ -136,11 +108,7 @@ describe('sendMessageToConversation — param validation (pre-DB)', () => {
 
   it('requires a valid interactive payload for interactive messages', async () => {
     // Missing payload entirely.
-    await expectSendError(
-      { ...base, messageType: 'interactive' },
-      400,
-      /payload is required/
-    );
+    await expectSendError({ ...base, messageType: 'interactive' }, 400, /payload is required/);
     // Too many buttons.
     await expectSendError(
       {

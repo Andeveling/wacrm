@@ -1,5 +1,5 @@
-import type { Metadata } from "next";
-import { DashboardShell } from "./dashboard-shell";
+import type { Metadata } from 'next';
+import { DashboardShell } from './dashboard-shell';
 
 // Server layout whose only job is to declare "do not index" metadata
 // for the authed app. robots.ts already disallows these paths at the
@@ -19,10 +19,6 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return <DashboardShell>{children}</DashboardShell>;
 }

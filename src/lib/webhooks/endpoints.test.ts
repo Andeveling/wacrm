@@ -1,10 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import {
-  generateWebhookSecret,
-  serializeWebhookEndpoint,
-  normalizeWebhookUrl,
-  WEBHOOK_SECRET_PREFIX,
-} from './endpoints';
+import { describe, expect, it } from 'vitest';
+import { generateWebhookSecret, normalizeWebhookUrl, serializeWebhookEndpoint, WEBHOOK_SECRET_PREFIX } from './endpoints';
 
 describe('generateWebhookSecret', () => {
   it('is prefixed and high-entropy, and unique per call', () => {
@@ -46,9 +41,7 @@ describe('serializeWebhookEndpoint', () => {
 
 describe('normalizeWebhookUrl', () => {
   it('accepts https and normalizes', () => {
-    expect(normalizeWebhookUrl('  https://example.com/hook  ')).toBe(
-      'https://example.com/hook'
-    );
+    expect(normalizeWebhookUrl('  https://example.com/hook  ')).toBe('https://example.com/hook');
   });
 
   it('rejects http, non-URLs, and non-strings', () => {

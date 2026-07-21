@@ -1,11 +1,9 @@
-"use client";
+'use client';
 
-import { useCallback, useState } from "react";
+import { useCallback, useState } from 'react';
 
 export function useContactSelection() {
-  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(
-    new Set(),
-  );
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
 
   const toggleContact = useCallback((contactId: string) => {
     setSelectedContactIds((selectedContactIds) => {
@@ -19,9 +17,7 @@ export function useContactSelection() {
   const toggleVisibleContacts = useCallback((contactIds: string[]) => {
     setSelectedContactIds((selectedContactIds) => {
       const updatedSelection = new Set(selectedContactIds);
-      const allVisibleContactsSelected =
-        contactIds.length > 0 &&
-        contactIds.every((contactId) => updatedSelection.has(contactId));
+      const allVisibleContactsSelected = contactIds.length > 0 && contactIds.every((contactId) => updatedSelection.has(contactId));
 
       contactIds.forEach((contactId) => {
         if (allVisibleContactsSelected) updatedSelection.delete(contactId);
@@ -31,10 +27,7 @@ export function useContactSelection() {
     });
   }, []);
 
-  const clearSelectedContacts = useCallback(
-    () => setSelectedContactIds(new Set()),
-    [],
-  );
+  const clearSelectedContacts = useCallback(() => setSelectedContactIds(new Set()), []);
 
   return {
     selectedContactIds,

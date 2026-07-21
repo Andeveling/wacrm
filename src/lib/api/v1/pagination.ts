@@ -42,19 +42,14 @@ export function parseListParams(request: Request): ListParams {
   const url = new URL(request.url);
 
   const rawLimit = Number(url.searchParams.get('limit'));
-  const limit =
-    Number.isFinite(rawLimit) && rawLimit > 0
-      ? Math.min(Math.floor(rawLimit), MAX_LIMIT)
-      : DEFAULT_LIMIT;
+  const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(Math.floor(rawLimit), MAX_LIMIT) : DEFAULT_LIMIT;
 
   return { limit, cursor: decodeCursor(url.searchParams.get('cursor')) };
 }
 
 /** Encode a row's `(created_at, id)` into an opaque cursor string. */
 export function encodeCursor(row: { created_at: string; id: string }): string {
-  return Buffer.from(`${row.created_at}|${row.id}`, 'utf8').toString(
-    'base64url'
-  );
+  return Buffer.from(`${row.created_at}|${row.id}`, 'utf8').toString('base64url');
 }
 
 // A cursor is only ever minted by `encodeCursor` from a real row's
@@ -64,8 +59,7 @@ export function encodeCursor(row: { created_at: string; id: string }): string {
 // interpolated raw). Anything that doesn't look server-issued is
 // treated as "no cursor" — the documented tolerance is to restart
 // from the first page, never to run an attacker-shaped query.
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Decode a cursor string, or null if missing/malformed/untrusted. */
 export function decodeCursor(value: string | null): Cursor | null {

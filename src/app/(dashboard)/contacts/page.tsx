@@ -1,28 +1,27 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
+import { ContactDetailView } from '@/components/contacts/contact-detail-view';
+import { ContactForm } from '@/components/contacts/contact-form';
+import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
+import { ImportModal } from '@/components/contacts/import-modal';
+import { useCan } from '@/hooks/use-can';
+import { createClient } from '@/lib/supabase/client';
+import type { Contact, ContactTag } from '@/types';
 
-import { CustomFieldsManager } from "@/components/contacts/custom-fields-manager";
-import { ContactDetailView } from "@/components/contacts/contact-detail-view";
-import { ContactForm } from "@/components/contacts/contact-form";
-import { ImportModal } from "@/components/contacts/import-modal";
-import { useCan } from "@/hooks/use-can";
-import { createClient } from "@/lib/supabase/client";
-import type { Contact, ContactTag } from "@/types";
-
-import { ContactsBulkBar } from "./_components/contacts-bulk-bar";
-import { ContactsFilters } from "./_components/contacts-filters";
-import { ContactsHeader } from "./_components/contacts-header";
-import { ContactsPagination } from "./_components/contacts-pagination";
-import { ContactsTable } from "./_components/contacts-table";
-import { useContactLifecycle } from "./_hooks/use-contact-lifecycle";
-import { useContactSelection } from "./_hooks/use-contact-selection";
-import { PAGE_SIZE, useContacts } from "./_hooks/use-contacts";
+import { ContactsBulkBar } from './_components/contacts-bulk-bar';
+import { ContactsFilters } from './_components/contacts-filters';
+import { ContactsHeader } from './_components/contacts-header';
+import { ContactsPagination } from './_components/contacts-pagination';
+import { ContactsTable } from './_components/contacts-table';
+import { useContactLifecycle } from './_hooks/use-contact-lifecycle';
+import { useContactSelection } from './_hooks/use-contact-selection';
+import { PAGE_SIZE, useContacts } from './_hooks/use-contacts';
 
 export default function ContactsPage() {
   const supabase = createClient();
-  const canEdit = useCan("send-messages");
-  const canEditSettings = useCan("edit-settings");
+  const canEdit = useCan('send-messages');
+  const canEditSettings = useCan('edit-settings');
 
   const selection = useContactSelection();
 
@@ -75,10 +74,7 @@ export default function ContactsPage() {
   }
 
   async function openEditForm(contact: Contact) {
-    const { data } = await supabase
-      .from("contact_tags")
-      .select("*")
-      .eq("contact_id", contact.id);
+    const { data } = await supabase.from('contact_tags').select('*').eq('contact_id', contact.id);
     setEditContact(contact);
     setEditContactTags(data ?? []);
     setFormOpen(true);
@@ -118,12 +114,7 @@ export default function ContactsPage() {
           status={status}
           canEdit={canEdit}
           onClear={selection.clearSelectedContacts}
-          onArchiveOrRestore={() =>
-            updateLifecycle(
-              status === "active" ? "archive" : "restore",
-              [...selection.selectedContactIds],
-            )
-          }
+          onArchiveOrRestore={() => updateLifecycle(status === 'active' ? 'archive' : 'restore', [...selection.selectedContactIds])}
         />
       )}
 
@@ -134,15 +125,11 @@ export default function ContactsPage() {
         status={status}
         selectedIds={selection.selectedContactIds}
         canEdit={canEdit}
-        onSelectAll={() =>
-          selection.toggleVisibleContacts(contacts.map((contact) => contact.id))
-        }
+        onSelectAll={() => selection.toggleVisibleContacts(contacts.map((contact) => contact.id))}
         onSelect={selection.toggleContact}
         onOpenDetail={openDetail}
         onEdit={openEditForm}
-        onArchiveOrRestore={(id) =>
-          updateLifecycle(status === "active" ? "archive" : "restore", [id])
-        }
+        onArchiveOrRestore={(id) => updateLifecycle(status === 'active' ? 'archive' : 'restore', [id])}
         onAdd={openAddForm}
       />
 
@@ -172,25 +159,11 @@ export default function ContactsPage() {
         }}
       />
 
-      <ContactDetailView
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        contactId={detailContactId}
-        onUpdated={reloadContacts}
-      />
+      <ContactDetailView open={detailOpen} onOpenChange={setDetailOpen} contactId={detailContactId} onUpdated={reloadContacts} />
 
-      <ImportModal
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        onImported={reloadContacts}
-      />
+      <ImportModal open={importOpen} onOpenChange={setImportOpen} onImported={reloadContacts} />
 
-      {canEditSettings && (
-        <CustomFieldsManager
-          open={customFieldsOpen}
-          onOpenChange={setCustomFieldsOpen}
-        />
-      )}
+      {canEditSettings && <CustomFieldsManager open={customFieldsOpen} onOpenChange={setCustomFieldsOpen} />}
     </div>
   );
 }

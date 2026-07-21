@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { describe, expect, it } from 'vitest';
 
 import { addContactTagIfAbsent } from './tag-write';
 
@@ -11,8 +11,7 @@ interface FakeOptions {
 }
 
 function fakeDb(options: FakeOptions = {}): SupabaseClient {
-  const contact =
-    options.contact === undefined ? { id: 'contact-1' } : options.contact;
+  const contact = options.contact === undefined ? { id: 'contact-1' } : options.contact;
   const tag = options.tag === undefined ? { id: 'tag-1' } : options.tag;
 
   return {
@@ -30,16 +29,11 @@ function fakeDb(options: FakeOptions = {}): SupabaseClient {
           return builder;
         },
         maybeSingle() {
-          if (table === 'contacts')
-            return Promise.resolve({ data: contact, error: null });
-          if (table === 'tags')
-            return Promise.resolve({ data: tag, error: null });
+          if (table === 'contacts') return Promise.resolve({ data: contact, error: null });
+          if (table === 'tags') return Promise.resolve({ data: tag, error: null });
           if (table === 'contact_tags' && state.operation === 'insert') {
             return Promise.resolve({
-              data:
-                options.insertData === undefined
-                  ? { id: 'join-1' }
-                  : options.insertData,
+              data: options.insertData === undefined ? { id: 'join-1' } : options.insertData,
               error: options.insertError ?? null,
             });
           }
@@ -63,9 +57,7 @@ describe('addContactTagIfAbsent', () => {
   });
 
   it('treats an error-free insert as successful even without a returned row', async () => {
-    await expect(
-      addContactTagIfAbsent(fakeDb({ insertData: null }), input)
-    ).resolves.toBe(true);
+    await expect(addContactTagIfAbsent(fakeDb({ insertData: null }), input)).resolves.toBe(true);
   });
 
   it('treats a unique violation as an idempotent duplicate', async () => {
@@ -77,12 +69,8 @@ describe('addContactTagIfAbsent', () => {
   });
 
   it('refuses contacts and tags outside the account', async () => {
-    await expect(
-      addContactTagIfAbsent(fakeDb({ contact: null }), input)
-    ).rejects.toMatchObject({ status: 404 });
-    await expect(
-      addContactTagIfAbsent(fakeDb({ tag: null }), input)
-    ).rejects.toMatchObject({ status: 404 });
+    await expect(addContactTagIfAbsent(fakeDb({ contact: null }), input)).rejects.toMatchObject({ status: 404 });
+    await expect(addContactTagIfAbsent(fakeDb({ tag: null }), input)).rejects.toMatchObject({ status: 404 });
   });
 
   it('surfaces non-duplicate insert failures', async () => {
@@ -90,8 +78,6 @@ describe('addContactTagIfAbsent', () => {
       insertData: null,
       insertError: { code: '42501', message: 'permission denied' },
     });
-    await expect(addContactTagIfAbsent(db, input)).rejects.toThrow(
-      'Failed to add contact tag: permission denied'
-    );
+    await expect(addContactTagIfAbsent(db, input)).rejects.toThrow('Failed to add contact tag: permission denied');
   });
 });

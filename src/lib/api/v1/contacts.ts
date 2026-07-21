@@ -9,11 +9,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  ContactIdentityError,
-  type ContactIdentityStatus,
-  resolveContactIdentity,
-} from '@/lib/contacts/resolve-identity';
+import { ContactIdentityError, type ContactIdentityStatus, resolveContactIdentity } from '@/lib/contacts/resolve-identity';
 import { resolveImportTagIds } from '@/lib/contacts/resolve-import-tags';
 import { addContactTagAndDispatch } from '@/lib/contacts/tag-events';
 import { isValidE164, sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
@@ -76,23 +72,12 @@ export function serializeContact(row: Record<string, unknown>): ApiContact {
  * can be created before WhatsApp is connected, so we fall back to the
  * account owner when there's no config yet.
  */
-export async function resolveAuditUserId(
-  db: SupabaseClient,
-  accountId: string
-): Promise<string> {
-  const { data: config } = await db
-    .from('whatsapp_config')
-    .select('user_id')
-    .eq('account_id', accountId)
-    .maybeSingle();
+export async function resolveAuditUserId(db: SupabaseClient, accountId: string): Promise<string> {
+  const { data: config } = await db.from('whatsapp_config').select('user_id').eq('account_id', accountId).maybeSingle();
   const configOwner = config?.user_id as string | undefined;
   if (configOwner) return configOwner;
 
-  const { data: account } = await db
-    .from('accounts')
-    .select('owner_user_id')
-    .eq('id', accountId)
-    .maybeSingle();
+  const { data: account } = await db.from('accounts').select('owner_user_id').eq('id', accountId).maybeSingle();
   const owner = account?.owner_user_id as string | undefined;
   if (!owner) {
     throw new ContactError('Account owner could not be resolved', 500);
@@ -121,10 +106,7 @@ export async function findOrCreateContact(
 ): Promise<{ id: string; created: boolean; status: ContactIdentityStatus }> {
   const sanitized = sanitizePhoneForMeta(input.phone);
   if (!isValidE164(sanitized)) {
-    throw new ContactError(
-      "'phone' must be a valid phone number in E.164 format (e.g. +14155550123)",
-      400
-    );
+    throw new ContactError("'phone' must be a valid phone number in E.164 format (e.g. +14155550123)", 400);
   }
 
   try {
@@ -176,25 +158,17 @@ export async function setContactTags(
   // failure can never wipe tags that were meant to stay. Every write
   // is error-checked and surfaced as a ContactError (→ 500) instead of
   // being swallowed behind a misleading 200.
-  const { data: current, error: readErr } = await db
-    .from('contact_tags')
-    .select('tag_id')
-    .eq('contact_id', contactId);
+  const { data: current, error: readErr } = await db.from('contact_tags').select('tag_id').eq('contact_id', contactId);
   if (readErr) {
     throw new ContactError('Failed to read contact tags', 500);
   }
   const existing = new Set((current ?? []).map((r) => r.tag_id as string));
 
   const toAdd = [...desired].filter((id) => !existing.has(id));
-  const toRemove =
-    mode === 'replace' ? [...existing].filter((id) => !desired.has(id)) : [];
+  const toRemove = mode === 'replace' ? [...existing].filter((id) => !desired.has(id)) : [];
 
   if (toRemove.length > 0) {
-    const { error } = await db
-      .from('contact_tags')
-      .delete()
-      .eq('contact_id', contactId)
-      .in('tag_id', toRemove);
+    const { error } = await db.from('contact_tags').delete().eq('contact_id', contactId).in('tag_id', toRemove);
     if (error) throw new ContactError('Failed to update contact tags', 500);
   }
   if (toAdd.length > 0) {
@@ -215,17 +189,8 @@ export async function setContactTags(
 }
 
 /** Fetch + serialize a single contact scoped to the account, or null. */
-export async function getContactById(
-  db: SupabaseClient,
-  accountId: string,
-  contactId: string
-): Promise<ApiContact | null> {
-  const { data, error } = await db
-    .from('contacts')
-    .select(CONTACT_SELECT)
-    .eq('id', contactId)
-    .eq('account_id', accountId)
-    .maybeSingle();
+export async function getContactById(db: SupabaseClient, accountId: string, contactId: string): Promise<ApiContact | null> {
+  const { data, error } = await db.from('contacts').select(CONTACT_SELECT).eq('id', contactId).eq('account_id', accountId).maybeSingle();
   if (error || !data) return null;
   return serializeContact(data as Record<string, unknown>);
 }

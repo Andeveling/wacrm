@@ -9,8 +9,8 @@
 // Marked destructive so hosts prompt before running it.
 // ============================================================
 
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import type { WacrmClient } from '../client.js';
 import { errorResult, handle, jsonResult } from './shared.js';
 
@@ -29,18 +29,13 @@ export function registerBroadcastTools(server: McpServer, client: WacrmClient): 
           .array(
             z.object({
               to: z.string().describe('Recipient phone number in E.164 format.'),
-              params: z
-                .array(z.string())
-                .optional()
-                .describe('Positional template body variables for this recipient.'),
-            }),
+              params: z.array(z.string()).optional().describe('Positional template body variables for this recipient.'),
+            })
           )
           .min(1)
           .max(1000)
           .describe('Recipients (1–1000). Invalid numbers are dropped and counted as rejected.'),
-        confirm: z
-          .boolean()
-          .describe('Must be true to actually send. A safety gate against accidental mass sends.'),
+        confirm: z.boolean().describe('Must be true to actually send. A safety gate against accidental mass sends.'),
       },
       annotations: {
         title: 'Send broadcast',
@@ -54,10 +49,10 @@ export function registerBroadcastTools(server: McpServer, client: WacrmClient): 
         return errorResult(
           'Refusing to send: confirm must be true. This launches a mass broadcast to ' +
             `${body.recipients.length} recipient(s). Confirm the recipient list and template ` +
-            'with the user, then call again with confirm=true.',
+            'with the user, then call again with confirm=true.'
         );
       }
       return jsonResult(await client.sendBroadcast(body));
-    }),
+    })
   );
 }

@@ -1,27 +1,23 @@
 'use client';
 
-import { Suspense, useMemo, type ReactNode } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-
+import { type ReactNode, Suspense, useMemo } from 'react';
+import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
+import { AppearancePanel } from '@/components/settings/appearance-panel';
+import { DealsSettings } from '@/components/settings/deals-settings';
+import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel';
+import { MembersTab } from '@/components/settings/members-tab';
+import { ProfileForm } from '@/components/settings/profile-form';
+import { QuickRepliesManager } from '@/components/settings/quick-replies-manager';
+import { SecurityPanel } from '@/components/settings/security-panel';
+import { SettingsOverview } from '@/components/settings/settings-overview';
+import { SettingsRail } from '@/components/settings/settings-rail';
+import { resolveSection, type SettingsSection } from '@/components/settings/settings-sections';
+import { TemplateManager } from '@/components/settings/template-manager';
+import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
-import { SettingsRail } from '@/components/settings/settings-rail';
-import { SettingsOverview } from '@/components/settings/settings-overview';
-import { ProfileForm } from '@/components/settings/profile-form';
-import { SecurityPanel } from '@/components/settings/security-panel';
-import { AppearancePanel } from '@/components/settings/appearance-panel';
-import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
-import { TemplateManager } from '@/components/settings/template-manager';
-import { QuickRepliesManager } from '@/components/settings/quick-replies-manager';
-import { FieldsAndTagsPanel } from '@/components/settings/fields-and-tags-panel';
-import { DealsSettings } from '@/components/settings/deals-settings';
-import { MembersTab } from '@/components/settings/members-tab';
-import { ApiKeysSettings } from '@/components/settings/api-keys-settings';
-import {
-  resolveSection,
-  type SettingsSection,
-} from '@/components/settings/settings-sections';
 
 // `useSearchParams` opts this page out of static prerendering unless it
 // sits under a Suspense boundary. Without one, the production build hits
@@ -66,7 +62,7 @@ function SettingsPageInner() {
       appearance: mode.charAt(0).toUpperCase() + mode.slice(1),
       deals: defaultCurrency,
     }),
-    [mode, defaultCurrency],
+    [mode, defaultCurrency]
   );
 
   const panel: Record<SettingsSection, ReactNode> = {
@@ -86,12 +82,8 @@ function SettingsPageInner() {
   return (
     <div>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {t('pageTitle')}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('pageDesc')}
-        </p>
+        <h1 className="font-bold text-2xl text-foreground tracking-tight">{t('pageTitle')}</h1>
+        <p className="mt-1 text-muted-foreground text-sm">{t('pageDesc')}</p>
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)] lg:items-start">

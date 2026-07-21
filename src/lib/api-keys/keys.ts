@@ -73,9 +73,7 @@ export function hashApiKey(plaintext: string): string {
  * malformed `Authorization` headers (e.g. a stale invite token).
  */
 export function looksLikeApiKey(value: string): boolean {
-  return (
-    value.startsWith(API_KEY_PREFIX) && value.length > API_KEY_PREFIX.length
-  );
+  return value.startsWith(API_KEY_PREFIX) && value.length > API_KEY_PREFIX.length;
 }
 
 /**

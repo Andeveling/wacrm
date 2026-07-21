@@ -12,8 +12,8 @@ vi.mock('@/lib/api/v1/contacts', async (importOriginal) => ({
   getContactById,
 }));
 
-import { DELETE, PATCH } from './route';
 import { POST } from './restore/route';
+import { DELETE, PATCH } from './route';
 
 const params = { params: Promise.resolve({ id: 'contact-1' }) };
 

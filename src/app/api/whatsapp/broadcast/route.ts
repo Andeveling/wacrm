@@ -1,31 +1,19 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { sendTemplateMessage } from '@/lib/whatsapp/meta-api'
-import { decrypt } from '@/lib/whatsapp/encryption'
-import type { SendTimeParams } from '@/lib/whatsapp/template-send-builder'
-import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard'
-import {
-  completeBroadcastRecipient,
-  getDeliverableRecipientPhone,
-} from '@/lib/whatsapp/broadcast-core'
-import {
-  sanitizePhoneForMeta,
-  isValidE164,
-  phoneVariants,
-  isRecipientNotAllowedError,
-} from '@/lib/whatsapp/phone-utils'
-import {
-  checkRateLimit,
-  rateLimitResponse,
-  RATE_LIMITS,
-} from '@/lib/rate-limit'
+import { NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/rate-limit';
+import { createClient } from '@/lib/supabase/server';
+import { completeBroadcastRecipient, getDeliverableRecipientPhone } from '@/lib/whatsapp/broadcast-core';
+import { decrypt } from '@/lib/whatsapp/encryption';
+import { sendTemplateMessage } from '@/lib/whatsapp/meta-api';
+import { isRecipientNotAllowedError, isValidE164, phoneVariants, sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
+import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard';
+import type { SendTimeParams } from '@/lib/whatsapp/template-send-builder';
 
 interface BroadcastResult {
-  recipient_id?: string
-  phone: string
-  status: 'sent' | 'failed' | 'cancelled'
-  whatsapp_message_id?: string
-  error?: string
+  recipient_id?: string;
+  phone: string;
+  status: 'sent' | 'failed' | 'cancelled';
+  whatsapp_message_id?: string;
+  error?: string;
 }
 
 /**
@@ -52,112 +40,88 @@ interface BroadcastResult {
  */
 interface NewRecipient {
   /** Required for a persisted dashboard delivery. */
-  recipient_id?: string
-  phone: string
+  recipient_id?: string;
+  phone: string;
   /** Body variable values, one per {{N}}. Legacy field. */
-  params?: string[]
+  params?: string[];
   /**
    * Structured per-send values (header text variable, media URL
    * override, URL/COPY_CODE button values). When set, takes
    * precedence over `params` for the body too — see
    * sendTemplateMessage for the merge rules.
    */
-  messageParams?: SendTimeParams
+  messageParams?: SendTimeParams;
 }
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
+    const supabase = await createClient();
 
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Per-user broadcast budget. Note: this limits how often a user
     // can *start* a campaign, not how many messages go out inside
     // one — the fan-out loop below runs without additional gating.
-    const limit = checkRateLimit(`broadcast:${user.id}`, RATE_LIMITS.broadcast)
+    const limit = checkRateLimit(`broadcast:${user.id}`, RATE_LIMITS.broadcast);
     if (!limit.success) {
-      return rateLimitResponse(limit)
+      return rateLimitResponse(limit);
     }
 
     // Resolve the caller's account_id. whatsapp_config + templates
     // + broadcasts are all account-scoped post-multi-user, so the
     // old `.eq('user_id', user.id)` filters miss every row created
     // by a teammate.
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('account_id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-    const accountId = profile?.account_id as string | undefined
+    const { data: profile } = await supabase.from('profiles').select('account_id').eq('user_id', user.id).maybeSingle();
+    const accountId = profile?.account_id as string | undefined;
     if (!accountId) {
-      return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
-        { status: 403 },
-      )
+      return NextResponse.json({ error: 'Your profile is not linked to an account.' }, { status: 403 });
     }
 
-    const body = await request.json()
-    const {
-      recipients: newRecipients,
-      phone_numbers,
-      template_name,
-      template_language,
-      template_params,
-    } = body
+    const body = await request.json();
+    const { recipients: newRecipients, phone_numbers, template_name, template_language, template_params } = body;
 
     // Normalize to a list of {phone, params} regardless of shape.
-    let recipients: NewRecipient[]
+    let recipients: NewRecipient[];
     if (Array.isArray(newRecipients) && newRecipients.length > 0) {
-      recipients = newRecipients
+      recipients = newRecipients;
     } else if (Array.isArray(phone_numbers) && phone_numbers.length > 0) {
-      const shared: string[] = Array.isArray(template_params)
-        ? template_params
-        : []
+      const shared: string[] = Array.isArray(template_params) ? template_params : [];
       recipients = phone_numbers.map((phone: string) => ({
         phone,
         params: shared,
-      }))
+      }));
     } else {
       return NextResponse.json(
         {
-          error:
-            'Provide either `recipients` (preferred) or `phone_numbers` — must be a non-empty array',
+          error: 'Provide either `recipients` (preferred) or `phone_numbers` — must be a non-empty array',
         },
         { status: 400 }
-      )
+      );
     }
 
     if (!template_name) {
-      return NextResponse.json(
-        { error: 'template_name is required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'template_name is required' }, { status: 400 });
     }
 
-    const { data: config, error: configError } = await supabase
-      .from('whatsapp_config')
-      .select('*')
-      .eq('account_id', accountId)
-      .single()
+    const { data: config, error: configError } = await supabase.from('whatsapp_config').select('*').eq('account_id', accountId).single();
 
     if (configError || !config) {
       return NextResponse.json(
         {
-          error:
-            'WhatsApp not configured. Please set up your WhatsApp integration first.',
+          error: 'WhatsApp not configured. Please set up your WhatsApp integration first.',
         },
         { status: 400 }
-      )
+      );
     }
 
-    const accessToken = decrypt(config.access_token)
+    const accessToken = decrypt(config.access_token);
 
     // Load the template row once so sendTemplateMessage can build
     // header + button components on each iteration. Loading inside
@@ -170,38 +134,35 @@ export async function POST(request: Request) {
       .eq('account_id', accountId)
       .eq('name', template_name)
       .eq('language', template_language || 'en_US')
-      .maybeSingle()
+      .maybeSingle();
     if (rawTemplateRow && !isMessageTemplate(rawTemplateRow)) {
       return NextResponse.json(
         {
-          error:
-            'Template row is malformed locally — run "Sync from Meta" in Settings to repair it before broadcasting.',
+          error: 'Template row is malformed locally — run "Sync from Meta" in Settings to repair it before broadcasting.',
         },
-        { status: 500 },
-      )
+        { status: 500 }
+      );
     }
-    const templateRow = rawTemplateRow ?? null
+    const templateRow = rawTemplateRow ?? null;
 
-    const results: BroadcastResult[] = []
-    let sentCount = 0
-    let failedCount = 0
+    const results: BroadcastResult[] = [];
+    let sentCount = 0;
+    let failedCount = 0;
 
     for (const recipient of recipients) {
       // Dashboard deliveries are tied to their materialized row. Re-read it
       // here so an archive that cancelled it cannot reach Meta.
-      const phone = recipient.recipient_id
-        ? await getDeliverableRecipientPhone(supabase, recipient.recipient_id)
-        : recipient.phone
+      const phone = recipient.recipient_id ? await getDeliverableRecipientPhone(supabase, recipient.recipient_id) : recipient.phone;
       if (!phone) {
         results.push({
           recipient_id: recipient.recipient_id,
           phone: recipient.phone,
           status: 'cancelled',
           error: 'Recipient is no longer eligible',
-        })
-        continue
+        });
+        continue;
       }
-      const sanitized = sanitizePhoneForMeta(phone)
+      const sanitized = sanitizePhoneForMeta(phone);
 
       if (!isValidE164(sanitized)) {
         results.push({
@@ -209,16 +170,16 @@ export async function POST(request: Request) {
           phone: recipient.phone,
           status: 'failed',
           error: 'Invalid phone number format',
-        })
-        failedCount++
-        continue
+        });
+        failedCount++;
+        continue;
       }
 
       // Retry with phone variants on "not in allowed list" so numbers
       // that differ only in a trunk-prefix 0 still reach recipients.
-      const variants = phoneVariants(sanitized)
-      let sentMessageId: string | null = null
-      let lastError: string | null = null
+      const variants = phoneVariants(sanitized);
+      let sentMessageId: string | null = null;
+      let lastError: string | null = null;
 
       for (const variant of variants) {
         try {
@@ -231,18 +192,17 @@ export async function POST(request: Request) {
             template: templateRow ?? undefined,
             messageParams: recipient.messageParams,
             params: recipient.params ?? [],
-          })
-          sentMessageId = result.messageId
-          lastError = null
-          break
+          });
+          sentMessageId = result.messageId;
+          lastError = null;
+          break;
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'Unknown error'
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           if (!isRecipientNotAllowedError(errorMessage)) {
-            lastError = errorMessage
-            break
+            lastError = errorMessage;
+            break;
           }
-          lastError = errorMessage
+          lastError = errorMessage;
           // retry with next variant
         }
       }
@@ -253,32 +213,29 @@ export async function POST(request: Request) {
               status: 'sent',
               whatsappMessageId: sentMessageId,
             })
-          : true
+          : true;
         results.push({
           recipient_id: recipient.recipient_id,
           phone,
           status: completed ? 'sent' : 'cancelled',
           ...(completed ? { whatsapp_message_id: sentMessageId } : {}),
-        })
-        if (completed) sentCount++
+        });
+        if (completed) sentCount++;
       } else {
-        console.error(
-          `Failed to send broadcast to ${recipient.phone}:`,
-          lastError
-        )
+        console.error(`Failed to send broadcast to ${recipient.phone}:`, lastError);
         const completed = recipient.recipient_id
           ? await completeBroadcastRecipient(supabase, recipient.recipient_id, {
               status: 'failed',
               errorMessage: lastError || 'Unknown error',
             })
-          : true
+          : true;
         results.push({
           recipient_id: recipient.recipient_id,
           phone,
           status: completed ? 'failed' : 'cancelled',
           ...(completed ? { error: lastError || 'Unknown error' } : {}),
-        })
-        if (completed) failedCount++
+        });
+        if (completed) failedCount++;
       }
     }
 
@@ -288,12 +245,9 @@ export async function POST(request: Request) {
       sent: sentCount,
       failed: failedCount,
       results,
-    })
+    });
   } catch (error) {
-    console.error('Error in WhatsApp broadcast POST:', error)
-    return NextResponse.json(
-      { error: 'Failed to process broadcast' },
-      { status: 500 }
-    )
+    console.error('Error in WhatsApp broadcast POST:', error);
+    return NextResponse.json({ error: 'Failed to process broadcast' }, { status: 500 });
   }
 }

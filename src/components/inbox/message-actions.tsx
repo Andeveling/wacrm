@@ -1,20 +1,16 @@
-"use client";
+'use client';
 
-import { useState, type ReactNode } from "react";
-import { CornerUpLeft, Copy, SmilePlus } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import type { Message } from "@/types";
-import { useTranslations } from "next-intl";
+import { Copy, CornerUpLeft, SmilePlus } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { type ReactNode, useState } from 'react';
+import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import type { Message } from '@/types';
 
 // WhatsApp's own quick-reaction bar starts with these six. Picking the same
 // set keeps the affordance familiar without pulling in a 300KB emoji library.
-const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
 
 interface MessageActionsProps {
   message: Message;
@@ -29,14 +25,8 @@ interface MessageActionsProps {
  * itself stays a pure presenter — this component owns the action surface so
  * the bubble's render path is unaffected when the toolbar isn't visible.
  */
-export function MessageActions({
-  message,
-  readOnly = false,
-  onReply,
-  onReact,
-  children,
-}: MessageActionsProps) {
-  const t = useTranslations("Inbox.actions");
+export function MessageActions({ message, readOnly = false, onReply, onReact, children }: MessageActionsProps) {
+  const t = useTranslations('Inbox.actions');
 
   // Touch devices have no hover. Long-press fires `contextmenu`; we capture
   // it, suppress the native menu, and pin the toolbar open until the user
@@ -44,8 +34,7 @@ export function MessageActions({
   const [touchOpen, setTouchOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const isAgent =
-    message.sender_type === "agent" || message.sender_type === "bot";
+  const isAgent = message.sender_type === 'agent' || message.sender_type === 'bot';
 
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -53,16 +42,16 @@ export function MessageActions({
   };
 
   const handleCopy = async () => {
-    const text = message.content_text ?? "";
+    const text = message.content_text ?? '';
     if (!text) {
-      toast.error(t("nothingToCopy"));
+      toast.error(t('nothingToCopy'));
       return;
     }
     try {
       await navigator.clipboard.writeText(text);
-      toast.success(t("copied"));
+      toast.success(t('copied'));
     } catch {
-      toast.error(t("copyFailed"));
+      toast.error(t('copyFailed'));
     }
     setTouchOpen(false);
   };
@@ -82,11 +71,9 @@ export function MessageActions({
   // hover region matches the bubble's content width — hovering empty space
   // in the row no longer reveals the toolbar.
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: layout wrapper — onContextMenu drives the right-click menu, onBlur drops the touch toolbar when focus leaves the row
     <div
-      className={cn(
-        "flex w-full",
-        isAgent ? "justify-end" : "justify-start",
-      )}
+      className={cn('flex w-full', isAgent ? 'justify-end' : 'justify-start')}
       onContextMenu={handleContextMenu}
       onBlur={() => setTouchOpen(false)}
     >
@@ -97,60 +84,57 @@ export function MessageActions({
        *  area. See issue #165. */}
       <div className="group/actions relative min-w-0 max-w-[75%]">
         {children}
-      <div
-        data-touch-open={touchOpen || pickerOpen ? "true" : undefined}
-        className={cn(
-          "absolute -top-3 z-10 flex h-7 items-center gap-0.5 rounded-full border border-border bg-popover/95 px-1 shadow-md backdrop-blur-sm transition-opacity",
-          "opacity-0 group-hover/actions:opacity-100 group-focus-within/actions:opacity-100",
-          "data-[touch-open=true]:opacity-100",
-          isAgent ? "right-3" : "left-3",
-        )}
-      >
-        {!readOnly && (
-          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-            <PopoverTrigger
+        <div
+          data-touch-open={touchOpen || pickerOpen ? 'true' : undefined}
+          className={cn(
+            'absolute -top-3 z-10 flex h-7 items-center gap-0.5 rounded-full border border-border bg-popover/95 px-1 shadow-md backdrop-blur-sm transition-opacity',
+            'opacity-0 group-focus-within/actions:opacity-100 group-hover/actions:opacity-100',
+            'data-[touch-open=true]:opacity-100',
+            isAgent ? 'right-3' : 'left-3'
+          )}
+        >
+          {!readOnly && (
+            <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+              <PopoverTrigger
+                className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
+                aria-label={t('react')}
+              >
+                <SmilePlus className="h-3.5 w-3.5" />
+              </PopoverTrigger>
+              <PopoverContent className="flex w-auto flex-row gap-1 p-1.5" sideOffset={6}>
+                {QUICK_EMOJIS.map((e) => (
+                  <button
+                    key={e}
+                    type="button"
+                    onClick={() => handlePickEmoji(e)}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none transition-transform hover:scale-125 hover:bg-muted"
+                    aria-label={t('reactWith', { emoji: e })}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+          )}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={handleReply}
               className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
-              aria-label={t("react")}
+              aria-label={t('reply')}
             >
-              <SmilePlus className="h-3.5 w-3.5" />
-            </PopoverTrigger>
-            <PopoverContent
-              className="flex w-auto flex-row gap-1 p-1.5"
-              sideOffset={6}
-            >
-              {QUICK_EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => handlePickEmoji(e)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-lg leading-none transition-transform hover:scale-125 hover:bg-muted"
-                  aria-label={t("reactWith", { emoji: e })}
-                >
-                  {e}
-                </button>
-              ))}
-            </PopoverContent>
-          </Popover>
-        )}
-        {!readOnly && (
+              <CornerUpLeft className="h-3.5 w-3.5" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={handleReply}
+            onClick={handleCopy}
             className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
-            aria-label={t("reply")}
+            aria-label={t('copyText')}
           >
-            <CornerUpLeft className="h-3.5 w-3.5" />
+            <Copy className="h-3.5 w-3.5" />
           </button>
-        )}
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex h-5 w-5 items-center justify-center rounded-full text-popover-foreground hover:bg-muted hover:text-foreground"
-          aria-label={t("copyText")}
-        >
-          <Copy className="h-3.5 w-3.5" />
-        </button>
-      </div>
+        </div>
       </div>
     </div>
   );

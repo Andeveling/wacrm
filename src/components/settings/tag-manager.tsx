@@ -1,29 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
 import { Loader2, Plus, Tag as TagIcon, X } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
 import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/lib/supabase/client';
+import { cn } from '@/lib/utils';
 import type { Tag } from '@/types';
 
 const PRESET_COLORS = [
@@ -56,6 +43,25 @@ export function TagManager() {
   const [newTagName, setNewTagName] = useState('');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[3].value);
 
+  const fetchTags = useCallback(
+    async (userId: string) => {
+      try {
+        setLoading(true);
+        const supabase = createClient();
+        const { data, error } = await supabase.from('tags').select('*').eq('user_id', userId).order('created_at', { ascending: true });
+
+        if (error) throw error;
+        setTags(data || []);
+      } catch (err) {
+        console.error('Failed to fetch tags:', err);
+        toast.error(t('failedToLoadTags'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t]
+  );
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -63,27 +69,7 @@ export function TagManager() {
       return;
     }
     fetchTags(user.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user?.id]);
-
-  async function fetchTags(userId: string) {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      setTags(data || []);
-    } catch (err) {
-      console.error('Failed to fetch tags:', err);
-      toast.error(t('failedToLoadTags'));
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [authLoading, user?.id, user, fetchTags]);
 
   async function handleCreate() {
     if (!newTagName.trim()) {
@@ -131,10 +117,7 @@ export function TagManager() {
 
     try {
       setDeleting(true);
-      const { error } = await supabase
-        .from('tags')
-        .delete()
-        .eq('id', tagToDelete.id);
+      const { error } = await supabase.from('tags').delete().eq('id', tagToDelete.id);
 
       if (error) throw error;
 
@@ -157,9 +140,7 @@ export function TagManager() {
           <TagIcon className="size-4 text-primary" />
           {t('tagsTitle')}
         </CardTitle>
-        <CardDescription className="text-muted-foreground">
-          {t('tagsDesc')}
-        </CardDescription>
+        <CardDescription className="text-muted-foreground">{t('tagsDesc')}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
@@ -173,17 +154,14 @@ export function TagManager() {
                 {tags.map((tag) => (
                   <span
                     key={tag.id}
-                    className="group inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors"
+                    className="group inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-sm transition-colors"
                     style={{
                       backgroundColor: `${tag.color}20`,
                       color: tag.color,
                       border: `1px solid ${tag.color}40`,
                     }}
                   >
-                    <span
-                      className="size-2 rounded-full"
-                      style={{ backgroundColor: tag.color }}
-                    />
+                    <span className="size-2 rounded-full" style={{ backgroundColor: tag.color }} />
                     {tag.name}
                     <button
                       type="button"
@@ -197,9 +175,7 @@ export function TagManager() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {t('noTags')}
-              </p>
+              <p className="text-muted-foreground text-sm">{t('noTags')}</p>
             )}
 
             {/* Inline create row */}
@@ -225,25 +201,15 @@ export function TagManager() {
                     aria-pressed={selectedColor === color.value}
                     className={cn(
                       'size-6 rounded-md transition-transform hover:scale-110',
-                      selectedColor === color.value &&
-                        'outline outline-2 outline-offset-2 outline-primary',
+                      selectedColor === color.value && 'outline outline-2 outline-primary outline-offset-2'
                     )}
                     style={{ backgroundColor: color.value }}
                     title={t(`colors.${color.name}` as Parameters<typeof t>[0])}
                   />
                 ))}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCreate}
-                disabled={saving || !newTagName.trim()}
-              >
-                {saving ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Plus className="size-4" />
-                )}
+              <Button variant="outline" size="sm" onClick={handleCreate} disabled={saving || !newTagName.trim()}>
+                {saving ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
                 {t('addTag')}
               </Button>
             </div>
@@ -256,23 +222,13 @@ export function TagManager() {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>{t('deleteTag')}</DialogTitle>
-            <DialogDescription>
-              {tagToDelete ? t('deleteConfirm', { name: tagToDelete.name }) : null}
-            </DialogDescription>
+            <DialogDescription>{tagToDelete ? t('deleteConfirm', { name: tagToDelete.name }) : null}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setDeleteDialogOpen(false)}
-              disabled={deleting}
-            >
+            <Button variant="ghost" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
               {t('cancel')}
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={deleting}
-            >
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
               {deleting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

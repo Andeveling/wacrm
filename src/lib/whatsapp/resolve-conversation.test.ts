@@ -59,19 +59,14 @@ function makeDb(script: Script): SupabaseClient {
       return Promise.resolve({ data: [], error: null });
     },
     like: () => {
-      const data = script.contactCandidatesByCall
-        ? (script.contactCandidatesByCall[likeCalls] ?? [])
-        : (script.contactCandidates ?? []);
+      const data = script.contactCandidatesByCall ? (script.contactCandidatesByCall[likeCalls] ?? []) : (script.contactCandidates ?? []);
       likeCalls++;
       return Promise.resolve({ data, error: null });
     },
     maybeSingle: () => {
-      if (table === 'whatsapp_config')
-        return Promise.resolve({ data: script.config ?? null, error: null });
+      if (table === 'whatsapp_config') return Promise.resolve({ data: script.config ?? null, error: null });
       if (table === 'contacts' && mode === 'select') {
-        const rows = script.contactCandidatesByCall
-          ? (script.contactCandidatesByCall[likeCalls] ?? [])
-          : (script.contactCandidates ?? []);
+        const rows = script.contactCandidatesByCall ? (script.contactCandidatesByCall[likeCalls] ?? []) : (script.contactCandidates ?? []);
         likeCalls++;
         return Promise.resolve({ data: rows[0] ?? null, error: null });
       }
@@ -107,8 +102,8 @@ function makeDb(script: Script): SupabaseClient {
       return Promise.resolve({ data: null, error: null });
     },
     // Thenable: `await db.from().update().eq()` lands here.
-    then: (resolve: (v: { data: null; error: null }) => void) =>
-      resolve({ data: null, error: null }),
+    // biome-ignore lint/suspicious/noThenProperty: Supabase's real client is thenable; tests await this builder directly
+    then: (resolve: (v: { data: null; error: null }) => void) => resolve({ data: null, error: null }),
   };
 
   return {
@@ -127,22 +122,16 @@ describe('resolveConversationByPhone', () => {
         throw new Error('should not query');
       },
     } as unknown as SupabaseClient;
-    await expect(
-      resolveConversationByPhone(db, 'acct', 'not-a-phone')
-    ).rejects.toBeInstanceOf(SendMessageError);
+    await expect(resolveConversationByPhone(db, 'acct', 'not-a-phone')).rejects.toBeInstanceOf(SendMessageError);
   });
 
   it('fails with whatsapp_not_configured when no config owner exists', async () => {
     const db = makeDb({ config: null });
-    await resolveConversationByPhone(db, 'acct', '+14155550123').catch(
-      (e: SendMessageError) => {
-        expect(e.code).toBe('whatsapp_not_configured');
-        expect(e.status).toBe(400);
-      }
-    );
-    await expect(
-      resolveConversationByPhone(db, 'acct', '+14155550123')
-    ).rejects.toBeInstanceOf(SendMessageError);
+    await resolveConversationByPhone(db, 'acct', '+14155550123').catch((e: SendMessageError) => {
+      expect(e.code).toBe('whatsapp_not_configured');
+      expect(e.status).toBe(400);
+    });
+    await expect(resolveConversationByPhone(db, 'acct', '+14155550123')).rejects.toBeInstanceOf(SendMessageError);
   });
 
   it('returns the existing contact + conversation without creating', async () => {
@@ -151,11 +140,7 @@ describe('resolveConversationByPhone', () => {
       contactCandidates: [{ id: 'c1', phone: '14155550123' }],
       existingConversation: { id: 'cv1' },
     });
-    const res = await resolveConversationByPhone(
-      db,
-      'acct',
-      '+1 (415) 555-0123'
-    );
+    const res = await resolveConversationByPhone(db, 'acct', '+1 (415) 555-0123');
     expect(res).toEqual({
       conversationId: 'cv1',
       contactId: 'c1',
@@ -171,12 +156,7 @@ describe('resolveConversationByPhone', () => {
       existingConversation: null,
       insertedConversationId: 'cv2',
     });
-    const res = await resolveConversationByPhone(
-      db,
-      'acct',
-      '+14155550199',
-      'Jane'
-    );
+    const res = await resolveConversationByPhone(db, 'acct', '+14155550199', 'Jane');
     expect(res).toEqual({
       conversationId: 'cv2',
       contactId: 'c2',

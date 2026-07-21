@@ -57,10 +57,7 @@ function sweepExpired(now: number) {
   }
 }
 
-export function checkRateLimit(
-  key: string,
-  { limit, windowMs }: RateLimitOptions,
-): RateLimitResult {
+export function checkRateLimit(key: string, { limit, windowMs }: RateLimitOptions): RateLimitResult {
   const now = Date.now();
 
   callsSinceSweep += 1;
@@ -108,7 +105,7 @@ export function rateLimitResponse(result: RateLimitResult): NextResponse {
         'X-RateLimit-Remaining': String(result.remaining),
         'X-RateLimit-Reset': String(Math.ceil(result.reset / 1000)),
       },
-    },
+    }
   );
 }
 

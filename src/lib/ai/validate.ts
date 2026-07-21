@@ -1,5 +1,5 @@
-import { generateReply } from './generate'
-import type { AiConfig } from './types'
+import { generateReply } from './generate';
+import type { AiConfig } from './types';
 
 /**
  * Cheap liveness + auth check: one tiny generation against the
@@ -14,5 +14,5 @@ export async function validateAiCredentials(config: AiConfig): Promise<void> {
     config,
     systemPrompt: 'You are a connectivity check. Reply with the single word: OK.',
     messages: [{ role: 'user', content: 'ping' }],
-  })
+  });
 }

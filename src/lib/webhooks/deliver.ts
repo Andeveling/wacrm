@@ -21,11 +21,10 @@
 import { randomUUID } from 'node:crypto';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-
-import { decrypt } from '@/lib/whatsapp/encryption';
+import type { WebhookEvent } from '@/lib/webhooks/events';
 import { buildSignatureHeader } from '@/lib/webhooks/sign';
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf';
-import type { WebhookEvent } from '@/lib/webhooks/events';
+import { decrypt } from '@/lib/whatsapp/encryption';
 
 /** Per-endpoint HTTP timeout. Kept short — this runs in `after()`. */
 export const DELIVERY_TIMEOUT_MS = 5000;
@@ -43,12 +42,7 @@ interface EndpointRow {
  * Deliver `event` (+ `data`) to every active endpoint of `accountId`
  * subscribed to it. Never throws.
  */
-export async function dispatchWebhookEvent(
-  db: SupabaseClient,
-  accountId: string,
-  event: WebhookEvent,
-  data: unknown
-): Promise<void> {
+export async function dispatchWebhookEvent(db: SupabaseClient, accountId: string, event: WebhookEvent, data: unknown): Promise<void> {
   try {
     const { data: rows, error } = await db
       .from('webhook_endpoints')
@@ -72,24 +66,14 @@ export async function dispatchWebhookEvent(
     });
     const tsSeconds = Math.floor(Date.now() / 1000);
 
-    await Promise.allSettled(
-      (rows as EndpointRow[]).map((row) =>
-        deliverOne(db, row, event, payload, tsSeconds)
-      )
-    );
+    await Promise.allSettled((rows as EndpointRow[]).map((row) => deliverOne(db, row, event, payload, tsSeconds)));
   } catch (err) {
     // Never let a delivery problem bubble into the webhook response.
     console.error('[webhooks] dispatch failed:', err);
   }
 }
 
-async function deliverOne(
-  db: SupabaseClient,
-  row: EndpointRow,
-  event: WebhookEvent,
-  payload: string,
-  tsSeconds: number
-): Promise<void> {
+async function deliverOne(db: SupabaseClient, row: EndpointRow, event: WebhookEvent, payload: string, tsSeconds: number): Promise<void> {
   // SSRF guard: refuse to POST to a host that resolves to a private /
   // loopback / link-local address. Counts as a failure so a
   // misconfigured internal URL surfaces and eventually auto-disables.
@@ -129,15 +113,9 @@ async function deliverOne(
     if (!res.ok) throw new Error(`endpoint responded ${res.status}`);
 
     // Success: clear the failure streak.
-    await db
-      .from('webhook_endpoints')
-      .update({ failure_count: 0, last_delivery_at: new Date().toISOString() })
-      .eq('id', row.id);
+    await db.from('webhook_endpoints').update({ failure_count: 0, last_delivery_at: new Date().toISOString() }).eq('id', row.id);
   } catch (err) {
-    console.warn(
-      `[webhooks] delivery to ${row.id} failed:`,
-      err instanceof Error ? err.message : err
-    );
+    console.warn(`[webhooks] delivery to ${row.id} failed:`, err instanceof Error ? err.message : err);
     await recordFailure(db, row);
   }
 }

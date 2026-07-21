@@ -22,7 +22,7 @@
  * reload.
  */
 
-import Dagre from "@dagrejs/dagre";
+import Dagre from '@dagrejs/dagre';
 
 export interface LayoutNode {
   id: string;
@@ -43,7 +43,7 @@ export interface LayoutPosition {
 
 export interface LayoutOptions {
   /** Top-to-bottom is the natural reading order for conversation flows. */
-  direction?: "TB" | "LR";
+  direction?: 'TB' | 'LR';
   /** Gap between rows (TB) / columns (LR). */
   rankSep?: number;
   /** Gap between sibling nodes within the same rank. */
@@ -55,7 +55,7 @@ export interface LayoutOptions {
 }
 
 const DEFAULTS: Required<LayoutOptions> = {
-  direction: "TB",
+  direction: 'TB',
   rankSep: 80,
   nodeSep: 60,
   defaultWidth: 240,
@@ -71,13 +71,9 @@ const DEFAULTS: Required<LayoutOptions> = {
  * dagre would shuffle the positioned ones the user already chose.
  * Better to leave the new nodes at 0,0 and let the user drag them.
  */
-export function shouldAutoLayout(
-  nodes: Array<{ position_x?: number | null; position_y?: number | null }>,
-): boolean {
+export function shouldAutoLayout(nodes: Array<{ position_x?: number | null; position_y?: number | null }>): boolean {
   if (nodes.length === 0) return false;
-  return nodes.every(
-    (n) => (n.position_x ?? 0) === 0 && (n.position_y ?? 0) === 0,
-  );
+  return nodes.every((n) => (n.position_x ?? 0) === 0 && (n.position_y ?? 0) === 0);
 }
 
 /**
@@ -86,11 +82,7 @@ export function shouldAutoLayout(
  * returned coordinates are the TOP-LEFT corner (matches React-Flow's
  * coordinate space — dagre internally tracks centers, we translate).
  */
-export function autoLayout(
-  nodes: LayoutNode[],
-  edges: LayoutEdge[],
-  options: LayoutOptions = {},
-): Map<string, LayoutPosition> {
+export function autoLayout(nodes: LayoutNode[], edges: LayoutEdge[], options: LayoutOptions = {}): Map<string, LayoutPosition> {
   const opts = { ...DEFAULTS, ...options };
   const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
   g.setGraph({

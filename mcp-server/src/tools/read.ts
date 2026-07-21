@@ -7,8 +7,8 @@
 // surface them without a confirmation prompt.
 // ============================================================
 
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import type { WacrmClient } from '../client.js';
 import { handle, jsonResult } from './shared.js';
 
@@ -24,7 +24,7 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
       inputSchema: {},
       annotations: { ...READ_ONLY, title: 'Who am I' },
     },
-    handle(async () => jsonResult(await client.me())),
+    handle(async () => jsonResult(await client.me()))
   );
 
   server.registerTool(
@@ -36,18 +36,12 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
       inputSchema: {
         search: z.string().optional().describe('Free-text search over name or phone number.'),
         tag: z.string().optional().describe('Tag id to filter by.'),
-        limit: z
-          .number()
-          .int()
-          .min(1)
-          .max(100)
-          .optional()
-          .describe('Page size, 1–100 (default 50).'),
+        limit: z.number().int().min(1).max(100).optional().describe('Page size, 1–100 (default 50).'),
         cursor: z.string().optional().describe('Opaque pagination cursor from a previous response.'),
       },
       annotations: { ...READ_ONLY, title: 'List contacts' },
     },
-    handle(async (args) => jsonResult(await client.listContacts(args))),
+    handle(async (args) => jsonResult(await client.listContacts(args)))
   );
 
   server.registerTool(
@@ -60,15 +54,14 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
       },
       annotations: { ...READ_ONLY, title: 'Get contact' },
     },
-    handle(async ({ id }) => jsonResult(await client.getContact(id))),
+    handle(async ({ id }) => jsonResult(await client.getContact(id)))
   );
 
   server.registerTool(
     'list_conversations',
     {
       title: 'List conversations',
-      description:
-        'List conversations, newest first. Optionally filter by status (open / pending / closed) or by contact id. Paginated.',
+      description: 'List conversations, newest first. Optionally filter by status (open / pending / closed) or by contact id. Paginated.',
       inputSchema: {
         status: z.enum(['open', 'pending', 'closed']).optional().describe('Conversation status filter.'),
         contact_id: z.string().optional().describe('Only conversations for this contact.'),
@@ -77,7 +70,7 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
       },
       annotations: { ...READ_ONLY, title: 'List conversations' },
     },
-    handle(async (args) => jsonResult(await client.listConversations(args))),
+    handle(async (args) => jsonResult(await client.listConversations(args)))
   );
 
   server.registerTool(
@@ -90,7 +83,7 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
       },
       annotations: { ...READ_ONLY, title: 'Get conversation' },
     },
-    handle(async ({ id }) => jsonResult(await client.getConversation(id))),
+    handle(async ({ id }) => jsonResult(await client.getConversation(id)))
   );
 
   server.registerTool(
@@ -107,8 +100,8 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
       annotations: { ...READ_ONLY, title: 'List messages' },
     },
     handle(async ({ conversation_id, limit, cursor }) =>
-      jsonResult(await client.listConversationMessages(conversation_id, { limit, cursor })),
-    ),
+      jsonResult(await client.listConversationMessages(conversation_id, { limit, cursor }))
+    )
   );
 
   server.registerTool(
@@ -122,6 +115,6 @@ export function registerReadTools(server: McpServer, client: WacrmClient): void 
       },
       annotations: { ...READ_ONLY, title: 'Get broadcast status' },
     },
-    handle(async ({ id }) => jsonResult(await client.getBroadcast(id))),
+    handle(async ({ id }) => jsonResult(await client.getBroadcast(id)))
   );
 }

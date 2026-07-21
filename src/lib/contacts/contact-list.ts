@@ -2,11 +2,7 @@ import 'server-only';
 
 import { createClient } from '@/lib/supabase/server';
 import type { Contact, Tag } from '@/types';
-import {
-  type ContactListQuery,
-  type ContactListSearchParams,
-  parseContactListQuery,
-} from './contact-list-query';
+import { type ContactListQuery, type ContactListSearchParams, parseContactListQuery } from './contact-list-query';
 
 const PAGE_SIZE = 25;
 
@@ -26,9 +22,7 @@ export interface ContactListView {
   };
 }
 
-export async function getContactListView(
-  searchParams: ContactListSearchParams
-): Promise<ContactListView> {
+export async function getContactListView(searchParams: ContactListSearchParams): Promise<ContactListView> {
   const query = parseContactListQuery(searchParams);
   const supabase = await createClient();
   const [listResult, tagsResult] = await Promise.all([

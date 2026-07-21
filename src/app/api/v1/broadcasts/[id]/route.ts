@@ -8,13 +8,10 @@
 // Account-scoped: a foreign id → 404.
 // ============================================================
 
+import { fail, ok, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { requireApiKey } from '@/lib/auth/api-context';
-import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireApiKey(request, 'broadcasts:send');
     const { id } = await params;

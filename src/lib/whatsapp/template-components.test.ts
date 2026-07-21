@@ -16,9 +16,7 @@ describe('buildMetaTemplatePayload', () => {
       name: 'order_confirmation',
       category: 'UTILITY',
       language: 'en_US',
-      components: [
-        { type: 'BODY', text: 'Your order is on its way.' },
-      ],
+      components: [{ type: 'BODY', text: 'Your order is on its way.' }],
     });
   });
 
@@ -79,11 +77,7 @@ describe('buildMetaTemplatePayload', () => {
       ...base,
       footer_text: 'Reply STOP to opt out',
     });
-    expect(
-      withFooter.components.some(
-        (c) => c.type === 'FOOTER' && c.text === 'Reply STOP to opt out',
-      ),
-    ).toBe(true);
+    expect(withFooter.components.some((c) => c.type === 'FOOTER' && c.text === 'Reply STOP to opt out')).toBe(true);
 
     const withoutFooter = buildMetaTemplatePayload({ ...base, footer_text: '' });
     expect(withoutFooter.components.some((c) => c.type === 'FOOTER')).toBe(false);
@@ -116,11 +110,6 @@ describe('buildMetaTemplatePayload', () => {
       footer_text: 'Footer',
       buttons: [{ type: 'QUICK_REPLY', text: 'Yes' }],
     });
-    expect(payload.components.map((c) => c.type)).toEqual([
-      'HEADER',
-      'BODY',
-      'FOOTER',
-      'BUTTONS',
-    ]);
+    expect(payload.components.map((c) => c.type)).toEqual(['HEADER', 'BODY', 'FOOTER', 'BUTTONS']);
   });
 });

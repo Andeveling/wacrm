@@ -36,12 +36,7 @@ export class ApiError extends Error {
   readonly status: number;
   readonly headers?: Record<string, string>;
 
-  constructor(
-    code: ApiErrorCode,
-    message: string,
-    status: number,
-    headers?: Record<string, string>
-  ) {
+  constructor(code: ApiErrorCode, message: string, status: number, headers?: Record<string, string>) {
     super(message);
     this.name = 'ApiError';
     this.code = code;
@@ -68,17 +63,12 @@ export function badRequest(message: string): ApiError {
 /** 429 — built from a `checkRateLimit` miss, with the standard headers. */
 export function rateLimited(result: RateLimitResult): ApiError {
   const retryAfter = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
-  return new ApiError(
-    'rate_limited',
-    'Rate limit exceeded for this API key',
-    429,
-    {
-      'Retry-After': String(retryAfter),
-      'X-RateLimit-Limit': String(result.limit),
-      'X-RateLimit-Remaining': String(result.remaining),
-      'X-RateLimit-Reset': String(Math.ceil(result.reset / 1000)),
-    }
-  );
+  return new ApiError('rate_limited', 'Rate limit exceeded for this API key', 429, {
+    'Retry-After': String(retryAfter),
+    'X-RateLimit-Limit': String(result.limit),
+    'X-RateLimit-Remaining': String(result.remaining),
+    'X-RateLimit-Reset': String(Math.ceil(result.reset / 1000)),
+  });
 }
 
 /** Success envelope: `{ data: <payload> }`. */
@@ -104,12 +94,7 @@ export function okList<T>(items: T[], nextCursor: string | null): NextResponse {
  * fine. `headers` is rarely needed; omit unless you have a
  * `Retry-After`-style set.
  */
-export function fail(
-  code: string,
-  message: string,
-  status: number,
-  headers?: Record<string, string>
-): NextResponse {
+export function fail(code: string, message: string, status: number, headers?: Record<string, string>): NextResponse {
   return NextResponse.json({ error: { code, message } }, { status, headers });
 }
 
@@ -120,14 +105,8 @@ export function fail(
  */
 export function toApiErrorResponse(err: unknown): NextResponse {
   if (err instanceof ApiError) {
-    return NextResponse.json(
-      { error: { code: err.code, message: err.message } },
-      { status: err.status, headers: err.headers }
-    );
+    return NextResponse.json({ error: { code: err.code, message: err.message } }, { status: err.status, headers: err.headers });
   }
   console.error('[api/v1] uncategorized error:', err);
-  return NextResponse.json(
-    { error: { code: 'internal', message: 'Internal server error' } },
-    { status: 500 }
-  );
+  return NextResponse.json({ error: { code: 'internal', message: 'Internal server error' } }, { status: 500 });
 }

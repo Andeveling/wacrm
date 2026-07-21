@@ -14,8 +14,8 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { loadConfig } from './config.js';
 import { WacrmClient } from './client.js';
+import { loadConfig } from './config.js';
 import { registerTools } from './tools/index.js';
 
 // package.json version, kept in sync manually with the manifest.
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   console.error(
     `wacrm MCP server v${VERSION} ready — instance ${config.baseUrl}, ` +
       `tool groups: ${groups.join(', ')}` +
-      (config.enableWrites ? '' : ' (read-only; set WACRM_ENABLE_WRITES to allow changes)'),
+      (config.enableWrites ? '' : ' (read-only; set WACRM_ENABLE_WRITES to allow changes)')
   );
 }
 

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * View-switcher + chrome for the flow editor.
@@ -24,18 +24,17 @@
  * feedback was that the list shape made flows "hard to understand".
  */
 
-import { useEffect, useState } from "react";
-import { GitFork, List } from "lucide-react";
-
-import { FlowBuilder } from "./flow-builder";
-import { FlowCanvas } from "./flow-canvas";
-import { FlowEditorProvider } from "./flow-editor-state";
-import { EditorHeader } from "./header";
-import { ValidationPanel } from "./validation-panel";
-import { NODE_META, nodeColors, type NodeType } from "./shared";
-import { cn } from "@/lib/utils";
-import type { FlowRow, FlowNodeRow } from "@/lib/flows/types";
-import { useTranslations } from "next-intl";
+import { GitFork, List } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
+import type { FlowNodeRow, FlowRow } from '@/lib/flows/types';
+import { cn } from '@/lib/utils';
+import { FlowBuilder } from './flow-builder';
+import { FlowCanvas } from './flow-canvas';
+import { FlowEditorProvider } from './flow-editor-state';
+import { EditorHeader } from './header';
+import { NODE_META, type NodeType, nodeColors } from './shared';
+import { ValidationPanel } from './validation-panel';
 
 /**
  * Below this viewport width we force list view and hide the toggle.
@@ -43,11 +42,11 @@ import { useTranslations } from "next-intl";
  * ~10px and live finger drags from one node to another aren't a
  * practical workflow. Matches Tailwind's `md` breakpoint.
  */
-const MOBILE_BREAKPOINT = "(max-width: 767px)";
+const MOBILE_BREAKPOINT = '(max-width: 767px)';
 
-type View = "canvas" | "list";
+type View = 'canvas' | 'list';
 
-const STORAGE_KEY = "wacrm.flowEditor.view";
+const STORAGE_KEY = 'wacrm.flowEditor.view';
 
 // Legend covers every node type, derived from NODE_META so a new type
 // can't silently go undocumented. NODE_META's key order already reads
@@ -60,7 +59,7 @@ interface Props {
 }
 
 export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
-  const t = useTranslations("Flows.builder");
+  const t = useTranslations('Flows.builder');
 
   // Read the persisted choice in the useState initializer. Safe even
   // though this is a client component because the parent page only
@@ -70,11 +69,11 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
   const [view, setView] = useState<View>(() => {
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved === "canvas" || saved === "list") return saved;
+      if (saved === 'canvas' || saved === 'list') return saved;
     } catch {
       // Private browsing / disabled storage — fall through to default.
     }
-    return "canvas";
+    return 'canvas';
   });
 
   // Live mobile detection. We don't render canvas under the
@@ -82,7 +81,7 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
   // intact so the user's preference comes back when they widen
   // again (e.g. rotating a tablet, resizing a window).
   const isMobile = useMatchMedia(MOBILE_BREAKPOINT);
-  const effectiveView: View = isMobile ? "list" : view;
+  const effectiveView: View = isMobile ? 'list' : view;
 
   const choose = (next: View) => {
     setView(next);
@@ -104,34 +103,25 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
             stage on small screens. */}
         {!isMobile && (
           <div className="flex items-center gap-4 px-6 py-3.5">
-            <div
-              role="group"
-              aria-label="Editor view"
-              className="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5"
-            >
+            {/* SegButtons carry aria-pressed, so no group role needed; fieldset would force a CSS reset. */}
+            <div className="inline-flex gap-0.5 rounded-lg border border-border bg-muted p-0.5">
               <SegButton
-                active={effectiveView === "canvas"}
-                onClick={() => choose("canvas")}
+                active={effectiveView === 'canvas'}
+                onClick={() => choose('canvas')}
                 icon={<GitFork className="h-3.5 w-3.5" />}
-                label={t("canvasView")}
+                label={t('canvasView')}
               />
               <SegButton
-                active={effectiveView === "list"}
-                onClick={() => choose("list")}
+                active={effectiveView === 'list'}
+                onClick={() => choose('list')}
                 icon={<List className="h-3.5 w-3.5" />}
-                label={t("listView")}
+                label={t('listView')}
               />
             </div>
             <div className="ml-auto hidden flex-wrap items-center gap-x-3.5 gap-y-1.5 lg:flex">
               {LEGEND_TYPES.map((t_type) => (
-                <span
-                  key={t_type}
-                  className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground"
-                >
-                  <span
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ background: nodeColors(t_type).solid }}
-                  />
+                <span key={t_type} className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: nodeColors(t_type).solid }} />
                   {t(`nodes.${t_type}.label`)}
                 </span>
               ))}
@@ -141,7 +131,7 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
 
         {/* ---- stage: the active view, owning its own overflow ---- */}
         <div className="relative mx-6 min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-card-2">
-          {effectiveView === "canvas" ? (
+          {effectiveView === 'canvas' ? (
             <FlowCanvas />
           ) : (
             <div className="absolute inset-0 overflow-y-auto">
@@ -151,7 +141,7 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
         </div>
 
         {/* ---- validation / activate-readiness bar ---- */}
-        <div className="px-6 pb-5 pt-3">
+        <div className="px-6 pt-3 pb-5">
           <ValidationPanel />
         </div>
       </div>
@@ -166,42 +156,30 @@ export function FlowEditorShell({ initialFlow, initialNodes }: Props) {
  */
 function useMatchMedia(query: string): boolean {
   const [matches, setMatches] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === 'undefined') return false;
     return window.matchMedia(query).matches;
   });
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === 'undefined') return;
     const mql = window.matchMedia(query);
     const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
     // Safari < 14 still uses addListener; addEventListener is the
     // modern path. Both fire identically.
-    mql.addEventListener("change", handler);
-    return () => mql.removeEventListener("change", handler);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
   }, [query]);
   return matches;
 }
 
-function SegButton({
-  active,
-  onClick,
-  icon,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-}) {
+function SegButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-colors",
-        active
-          ? "bg-card text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground",
+        'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium text-[12.5px] transition-colors',
+        active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
       )}
     >
       {icon}

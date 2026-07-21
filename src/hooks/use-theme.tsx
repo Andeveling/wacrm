@@ -1,24 +1,8 @@
-"use client";
+'use client';
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
-import {
-  DEFAULT_MODE,
-  DEFAULT_THEME,
-  MODE_STORAGE_KEY,
-  STORAGE_KEY,
-  isMode,
-  isThemeId,
-  type Mode,
-  type ThemeId,
-} from "@/lib/themes";
+import { DEFAULT_MODE, DEFAULT_THEME, isMode, isThemeId, MODE_STORAGE_KEY, type Mode, STORAGE_KEY, type ThemeId } from '@/lib/themes';
 
 /**
  * ThemeProvider — wraps the whole app, owns the two theming axes:
@@ -48,7 +32,7 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 function readInitialTheme(): ThemeId {
-  if (typeof window === "undefined") return DEFAULT_THEME;
+  if (typeof window === 'undefined') return DEFAULT_THEME;
   // Whatever the boot script applied is the truth. Fall back to
   // localStorage / default if for some reason the attribute is missing
   // (e.g. someone bypassed the boot script in a custom layout).
@@ -64,7 +48,7 @@ function readInitialTheme(): ThemeId {
 }
 
 function readInitialMode(): Mode {
-  if (typeof window === "undefined") return DEFAULT_MODE;
+  if (typeof window === 'undefined') return DEFAULT_MODE;
   const fromAttr = document.documentElement.dataset.mode;
   if (isMode(fromAttr)) return fromAttr;
   try {
@@ -82,7 +66,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setTheme = useCallback((next: ThemeId) => {
     setThemeState(next);
-    if (typeof document !== "undefined") {
+    if (typeof document !== 'undefined') {
       document.documentElement.dataset.theme = next;
     }
     try {
@@ -95,7 +79,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback((next: Mode) => {
     setModeState(next);
-    if (typeof document !== "undefined") {
+    if (typeof document !== 'undefined') {
       document.documentElement.dataset.mode = next;
     }
     try {
@@ -106,7 +90,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggleMode = useCallback(() => {
-    setMode(mode === "dark" ? "light" : "dark");
+    setMode(mode === 'dark' ? 'light' : 'dark');
   }, [mode, setMode]);
 
   // Sync from other tabs — change theme or mode in tab A, tab B
@@ -127,15 +111,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, [theme, mode]);
 
-  return (
-    <ThemeContext.Provider value={{ theme, setTheme, mode, setMode, toggleMode }}>
-      {children}
-    </ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={{ theme, setTheme, mode, setMode, toggleMode }}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

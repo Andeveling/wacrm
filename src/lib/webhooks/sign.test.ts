@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { buildSignatureHeader, verifySignatureHeader } from './sign';
 
 const secret = 'whsec_testsecret';
@@ -22,7 +22,7 @@ describe('verifySignatureHeader', () => {
   });
 
   it('rejects a tampered body', () => {
-    expect(verifySignatureHeader(header, body + 'x', secret, now)).toBe(false);
+    expect(verifySignatureHeader(header, `${body}x`, secret, now)).toBe(false);
   });
 
   it('rejects a wrong secret', () => {
@@ -38,7 +38,9 @@ describe('verifySignatureHeader', () => {
   });
 
   it('tolerates uppercase hex and whitespace in the header', () => {
-    const [, t, v1] = header.match(/^t=(\d+),v1=([0-9a-f]+)$/)!;
+    const match = header.match(/^t=(\d+),v1=([0-9a-f]+)$/);
+    if (!match) throw new Error('test setup: header did not match expected format');
+    const [, t, v1] = match;
     const loose = `t=${t}, v1=${v1.toUpperCase()}`;
     expect(verifySignatureHeader(loose, body, secret, Number(t))).toBe(true);
   });

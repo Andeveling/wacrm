@@ -21,14 +21,8 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
  * Date.now() here, so the value is testable and callers control the
  * clock).
  */
-export function buildSignatureHeader(
-  rawBody: string,
-  secret: string,
-  timestampSeconds: number
-): string {
-  const signature = createHmac('sha256', secret)
-    .update(`${timestampSeconds}.${rawBody}`)
-    .digest('hex');
+export function buildSignatureHeader(rawBody: string, secret: string, timestampSeconds: number): string {
+  const signature = createHmac('sha256', secret).update(`${timestampSeconds}.${rawBody}`).digest('hex');
   return `t=${timestampSeconds},v1=${signature}`;
 }
 
@@ -58,9 +52,7 @@ export function verifySignatureHeader(
   if (!Number.isFinite(t) || !v1) return false;
   if (Math.abs(nowSeconds - t) > toleranceSeconds) return false;
 
-  const expected = createHmac('sha256', secret)
-    .update(`${t}.${rawBody}`)
-    .digest('hex');
+  const expected = createHmac('sha256', secret).update(`${t}.${rawBody}`).digest('hex');
   // Constant-time compare; guard against length mismatch (timingSafeEqual
   // throws on unequal-length buffers).
   if (expected.length !== v1.length) return false;

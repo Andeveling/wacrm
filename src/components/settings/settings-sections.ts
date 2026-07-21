@@ -3,6 +3,7 @@ import {
   FileText,
   KeyRound,
   LayoutGrid,
+  type LucideIcon,
   Palette,
   PlugZap,
   Shield,
@@ -10,7 +11,6 @@ import {
   User,
   UsersRound,
   Zap,
-  type LucideIcon,
 } from 'lucide-react';
 
 /**

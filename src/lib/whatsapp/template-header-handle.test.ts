@@ -5,8 +5,8 @@ vi.mock('./meta-api', () => ({
   uploadResumableMedia: vi.fn(async () => ({ handle: 'HANDLE123' })),
 }));
 
-import { ensureImageHeaderHandle } from './template-header-handle';
 import { uploadResumableMedia } from './meta-api';
+import { ensureImageHeaderHandle } from './template-header-handle';
 import type { TemplatePayload } from './template-validators';
 
 function payload(over: Partial<TemplatePayload> = {}): TemplatePayload {
@@ -60,7 +60,10 @@ describe('ensureImageHeaderHandle', () => {
 
   it('derives + sets header_handle from a valid image URL', async () => {
     vi.stubEnv('META_APP_ID', 'app-1');
-    vi.stubGlobal('fetch', vi.fn(async () => imgResponse('image/jpeg', 2048)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => imgResponse('image/jpeg', 2048))
+    );
     const p = payload();
     await ensureImageHeaderHandle(p, 'tok');
     expect(uploadResumableMedia).toHaveBeenCalledOnce();
@@ -69,13 +72,19 @@ describe('ensureImageHeaderHandle', () => {
 
   it('rejects a non-image content type', async () => {
     vi.stubEnv('META_APP_ID', 'app-1');
-    vi.stubGlobal('fetch', vi.fn(async () => imgResponse('text/html')));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => imgResponse('text/html'))
+    );
     await expect(ensureImageHeaderHandle(payload(), 'tok')).rejects.toThrow(/JPEG or PNG/);
   });
 
   it('rejects an image over 5 MB', async () => {
     vi.stubEnv('META_APP_ID', 'app-1');
-    vi.stubGlobal('fetch', vi.fn(async () => imgResponse('image/png', 6 * 1024 * 1024)));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => imgResponse('image/png', 6 * 1024 * 1024))
+    );
     await expect(ensureImageHeaderHandle(payload(), 'tok')).rejects.toThrow(/5 MB/);
   });
 });

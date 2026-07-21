@@ -33,9 +33,9 @@ export function SettingsChip({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap [&_svg]:size-3.5',
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 font-medium text-xs [&_svg]:size-3.5',
         VARIANTS[variant],
-        className,
+        className
       )}
     >
       {children}
@@ -44,21 +44,11 @@ export function SettingsChip({
 }
 
 /** A small live status dot (e.g. WhatsApp connected indicator). */
-export function StatusDot({
-  tone = 'ok',
-  className,
-}: {
-  tone?: 'ok' | 'muted';
-  className?: string;
-}) {
+export function StatusDot({ tone = 'ok', className }: { tone?: 'ok' | 'muted'; className?: string }) {
   return (
     <span
       aria-hidden
-      className={cn(
-        'inline-block size-1.5 shrink-0 rounded-full',
-        tone === 'ok' ? 'bg-emerald-500' : 'bg-muted-foreground',
-        className,
-      )}
+      className={cn('inline-block size-1.5 shrink-0 rounded-full', tone === 'ok' ? 'bg-emerald-500' : 'bg-muted-foreground', className)}
     />
   );
 }

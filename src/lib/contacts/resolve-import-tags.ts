@@ -46,10 +46,7 @@ export async function resolveImportTagIds(
     return { tagIdByKey: new Map(), skippedNames: [] };
   }
 
-  const { data: existing, error: fetchError } = await supabase
-    .from('tags')
-    .select('id, name')
-    .eq('account_id', accountId);
+  const { data: existing, error: fetchError } = await supabase.from('tags').select('id, name').eq('account_id', accountId);
 
   if (fetchError) throw fetchError;
 

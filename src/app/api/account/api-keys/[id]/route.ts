@@ -15,23 +15,13 @@
 import { NextResponse } from 'next/server';
 
 import { requireRole, toErrorResponse } from '@/lib/auth/account';
-import {
-  checkRateLimit,
-  rateLimitResponse,
-  RATE_LIMITS,
-} from '@/lib/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/rate-limit';
 
-export async function DELETE(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireRole('admin');
 
-    const limit = checkRateLimit(
-      `admin:apiKeyRevoke:${ctx.userId}`,
-      RATE_LIMITS.adminAction
-    );
+    const limit = checkRateLimit(`admin:apiKeyRevoke:${ctx.userId}`, RATE_LIMITS.adminAction);
     if (!limit.success) return rateLimitResponse(limit);
 
     const { id } = await params;
@@ -51,17 +41,11 @@ export async function DELETE(
 
     if (error) {
       console.error('[DELETE /api/account/api-keys/[id]] error:', error);
-      return NextResponse.json(
-        { error: 'Failed to revoke API key' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to revoke API key' }, { status: 500 });
     }
     if (!data) {
       // Either no such key in this account, or it was already revoked.
-      return NextResponse.json(
-        { error: 'API key not found or already revoked' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'API key not found or already revoked' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });

@@ -10,8 +10,8 @@
  *   https://developers.facebook.com/docs/whatsapp/business-management-api/message-templates/components
  */
 
-import type { TemplatePayload } from './template-validators';
 import type { TemplateButton } from '@/types';
+import type { TemplatePayload } from './template-validators';
 
 export interface MetaComponent {
   type: 'HEADER' | 'BODY' | 'FOOTER' | 'BUTTONS';
@@ -51,12 +51,7 @@ function buildHeaderComponent(payload: TemplatePayload): MetaComponent | null {
     return component;
   }
 
-  const format =
-    header_type === 'image'
-      ? 'IMAGE'
-      : header_type === 'video'
-        ? 'VIDEO'
-        : 'DOCUMENT';
+  const format = header_type === 'image' ? 'IMAGE' : header_type === 'video' ? 'VIDEO' : 'DOCUMENT';
   const component: MetaComponent = { type: 'HEADER', format };
   if (header_handle) {
     component.example = { header_handle: [header_handle] };
@@ -121,10 +116,7 @@ export interface MetaTemplateSubmitPayload {
   components: MetaComponent[];
 }
 
-const CATEGORY_TO_META: Record<
-  'Marketing' | 'Utility' | 'Authentication',
-  MetaTemplateSubmitPayload['category']
-> = {
+const CATEGORY_TO_META: Record<'Marketing' | 'Utility' | 'Authentication', MetaTemplateSubmitPayload['category']> = {
   Marketing: 'MARKETING',
   Utility: 'UTILITY',
   Authentication: 'AUTHENTICATION',
@@ -134,9 +126,7 @@ const CATEGORY_TO_META: Record<
  * Assemble the full submit payload (name + category + language +
  * components in canonical order: HEADER → BODY → FOOTER → BUTTONS).
  */
-export function buildMetaTemplatePayload(
-  payload: TemplatePayload,
-): MetaTemplateSubmitPayload {
+export function buildMetaTemplatePayload(payload: TemplatePayload): MetaTemplateSubmitPayload {
   const components: MetaComponent[] = [];
   const header = buildHeaderComponent(payload);
   if (header) components.push(header);

@@ -38,10 +38,7 @@ export const SCOPE_DESCRIPTIONS: Record<ApiScope, string> = {
 
 /** Type-narrow an unknown value into a valid `ApiScope`. */
 export function isApiScope(value: unknown): value is ApiScope {
-  return (
-    typeof value === 'string' &&
-    (API_SCOPES as readonly string[]).includes(value)
-  );
+  return typeof value === 'string' && (API_SCOPES as readonly string[]).includes(value);
 }
 
 /**
@@ -67,9 +64,6 @@ export function normalizeScopes(input: unknown): ApiScope[] | null {
  * and any future inline check should call this rather than poking
  * at the array directly.
  */
-export function hasScope(
-  granted: readonly string[],
-  required: ApiScope
-): boolean {
+export function hasScope(granted: readonly string[], required: ApiScope): boolean {
   return granted.includes(required);
 }

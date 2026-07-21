@@ -34,30 +34,30 @@ export function loadConfig(): Config {
     throw new Error(
       `Missing required environment variable(s): ${missing.join(', ')}. ` +
         `Set WACRM_BASE_URL to your instance URL (e.g. https://crm.example.com) ` +
-        `and WACRM_API_KEY to a key from Settings → API keys.`,
+        `and WACRM_API_KEY to a key from Settings → API keys.`
     );
   }
 
+  // Narrowing: missing guards above ensure both are defined here.
+  if (!apiKey) throw new Error('WACRM_API_KEY is required');
+  if (!baseUrlRaw) throw new Error('WACRM_BASE_URL is required');
+
   // Normalise: strip a trailing slash so path joins are predictable.
-  const baseUrl = baseUrlRaw!.replace(/\/+$/, '');
+  const baseUrl = baseUrlRaw.replace(/\/+$/, '');
   if (!/^https?:\/\//.test(baseUrl)) {
-    throw new Error(
-      `WACRM_BASE_URL must start with http:// or https:// (got "${baseUrl}").`,
-    );
+    throw new Error(`WACRM_BASE_URL must start with http:// or https:// (got "${baseUrl}").`);
   }
 
   const enableWrites = truthy(process.env.WACRM_ENABLE_WRITES);
   const enableBroadcasts = truthy(process.env.WACRM_ENABLE_BROADCASTS);
 
   if (enableBroadcasts && !enableWrites) {
-    throw new Error(
-      'WACRM_ENABLE_BROADCASTS requires WACRM_ENABLE_WRITES to also be set.',
-    );
+    throw new Error('WACRM_ENABLE_BROADCASTS requires WACRM_ENABLE_WRITES to also be set.');
   }
 
   return {
     baseUrl,
-    apiKey: apiKey!,
+    apiKey,
     enableWrites,
     enableBroadcasts,
   };

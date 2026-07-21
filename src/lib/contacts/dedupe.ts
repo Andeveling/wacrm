@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { normalizePhone, phonesMatch } from "@/lib/whatsapp/phone-utils";
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { normalizePhone, phonesMatch } from '@/lib/whatsapp/phone-utils';
 
 /**
  * Contact de-duplication helpers, shared by the WhatsApp webhook, the
@@ -32,27 +32,17 @@ export interface ExistingContact {
  * pull every contact), then applies the strict `phonesMatch` in JS on
  * the small candidate set — the exact approach the webhook has used.
  */
-export async function findExistingContact(
-  db: SupabaseClient,
-  accountId: string,
-  phone: string,
-): Promise<ExistingContact | null> {
+export async function findExistingContact(db: SupabaseClient, accountId: string, phone: string): Promise<ExistingContact | null> {
   const normalized = normalizePhone(phone);
   if (!normalized) return null;
 
   const suffix = normalized.length >= 8 ? normalized.slice(-8) : normalized;
 
-  const { data, error } = await db
-    .from("contacts")
-    .select("*")
-    .eq("account_id", accountId)
-    .like("phone", `%${suffix}`);
+  const { data, error } = await db.from('contacts').select('*').eq('account_id', accountId).like('phone', `%${suffix}`);
 
   if (error || !data) return null;
 
-  return (
-    (data as ExistingContact[]).find((c) => phonesMatch(c.phone, phone)) ?? null
-  );
+  return (data as ExistingContact[]).find((c) => phonesMatch(c.phone, phone)) ?? null;
 }
 
 /**
@@ -70,8 +60,8 @@ export function isExactMatch(existing: ExistingContact, phone: string): boolean 
  * format-equal insert that slipped past the in-app check.
  */
 export function isUniqueViolation(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  return (error as { code?: string }).code === "23505";
+  if (!error || typeof error !== 'object') return false;
+  return (error as { code?: string }).code === '23505';
 }
 
 /**
@@ -82,7 +72,7 @@ export function isUniqueViolation(error: unknown): boolean {
  */
 export function dedupeByPhone<T extends { phone: string }>(
   rows: T[],
-  merge?: (first: T, duplicate: T) => T,
+  merge?: (first: T, duplicate: T) => T
 ): { unique: T[]; duplicates: number } {
   const seen = new Map<string, number>();
   const unique: T[] = [];

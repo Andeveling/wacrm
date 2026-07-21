@@ -13,9 +13,9 @@
 // depends on is sound.
 // ============================================================
 
-import { requireApiKey } from '@/lib/auth/api-context';
-import { getAccountName } from '@/lib/api-keys/store';
 import { ok, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { getAccountName } from '@/lib/api-keys/store';
+import { requireApiKey } from '@/lib/auth/api-context';
 
 export async function GET(request: Request) {
   try {

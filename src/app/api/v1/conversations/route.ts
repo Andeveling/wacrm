@@ -6,18 +6,11 @@
 // tags via the shared CONVERSATION_SELECT.
 // ============================================================
 
-import { requireApiKey } from '@/lib/auth/api-context';
-import { okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
-import {
-  parseListParams,
-  keysetFilter,
-  buildPage,
-} from '@/lib/api/v1/pagination';
-import {
-  CONVERSATION_SELECT,
-  normalizeConversation,
-} from '@/lib/inbox/conversations';
 import { serializeConversation } from '@/lib/api/v1/conversations';
+import { buildPage, keysetFilter, parseListParams } from '@/lib/api/v1/pagination';
+import { fail, okList, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { requireApiKey } from '@/lib/auth/api-context';
+import { CONVERSATION_SELECT, normalizeConversation } from '@/lib/inbox/conversations';
 import type { Conversation } from '@/types';
 
 export async function GET(request: Request) {
@@ -28,10 +21,7 @@ export async function GET(request: Request) {
     const status = url.searchParams.get('status');
     const contactId = url.searchParams.get('contact_id');
 
-    let query = ctx.supabase
-      .from('conversations')
-      .select(CONVERSATION_SELECT)
-      .eq('account_id', ctx.accountId);
+    let query = ctx.supabase.from('conversations').select(CONVERSATION_SELECT).eq('account_id', ctx.accountId);
 
     if (status) query = query.eq('status', status);
     if (contactId) query = query.eq('contact_id', contactId);
@@ -50,14 +40,9 @@ export async function GET(request: Request) {
       return fail('internal', 'Failed to list conversations', 500);
     }
 
-    const { items, nextCursor } = buildPage(
-      (data ?? []) as Array<{ created_at: string; id: string }>,
-      limit
-    );
+    const { items, nextCursor } = buildPage((data ?? []) as Array<{ created_at: string; id: string }>, limit);
     return okList(
-      items.map((r) =>
-        serializeConversation(normalizeConversation(r as Conversation))
-      ),
+      items.map((r) => serializeConversation(normalizeConversation(r as Conversation))),
       nextCursor
     );
   } catch (err) {

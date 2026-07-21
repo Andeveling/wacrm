@@ -20,38 +20,23 @@
 // ============================================================
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-
+import { supabaseAdmin } from '@/lib/flows/admin-client';
+import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
+import { type InteractiveMessagePayload, interactivePayloadPreviewText, validateInteractivePayload } from '@/lib/whatsapp/interactive';
 import {
-  sendTextMessage,
-  sendTemplateMessage,
-  sendMediaMessage,
+  type MediaKind,
   sendInteractiveButtons,
   sendInteractiveList,
-  type MediaKind,
+  sendMediaMessage,
+  sendTemplateMessage,
+  sendTextMessage,
 } from '@/lib/whatsapp/meta-api';
-import {
-  validateInteractivePayload,
-  interactivePayloadPreviewText,
-  type InteractiveMessagePayload,
-} from '@/lib/whatsapp/interactive';
-import { decrypt, encrypt, isLegacyFormat } from '@/lib/whatsapp/encryption';
-import { supabaseAdmin } from '@/lib/flows/admin-client';
-import {
-  sanitizePhoneForMeta,
-  isValidE164,
-  phoneVariants,
-  isRecipientNotAllowedError,
-} from '@/lib/whatsapp/phone-utils';
-import type { MessageTemplate } from '@/types';
+import { isRecipientNotAllowedError, isValidE164, phoneVariants, sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard';
+import type { MessageTemplate } from '@/types';
 
 export const MEDIA_KINDS = ['image', 'video', 'document', 'audio'] as const;
-export const VALID_MESSAGE_TYPES = [
-  'text',
-  'template',
-  'interactive',
-  ...MEDIA_KINDS,
-] as const;
+export const VALID_MESSAGE_TYPES = ['text', 'template', 'interactive', ...MEDIA_KINDS] as const;
 
 /**
  * Typed failure with a machine `code` and a suggested HTTP `status`.
@@ -100,11 +85,7 @@ export type EligibleContact = {
 };
 
 /** Re-read the recipient immediately before crossing the Meta boundary. */
-export async function requireEligibleContact(
-  db: SupabaseClient,
-  accountId: string,
-  contactId: string
-): Promise<EligibleContact> {
+export async function requireEligibleContact(db: SupabaseClient, accountId: string, contactId: string): Promise<EligibleContact> {
   const { data: contact, error } = await db
     .from('contacts')
     .select('id, phone, archived_at')
@@ -113,18 +94,10 @@ export async function requireEligibleContact(
     .maybeSingle();
 
   if (error || !contact) {
-    throw new SendMessageError(
-      'contact_ineligible',
-      'Contact is no longer eligible to receive messages',
-      409
-    );
+    throw new SendMessageError('contact_ineligible', 'Contact is no longer eligible to receive messages', 409);
   }
   if (contact.archived_at) {
-    throw new SendMessageError(
-      'contact_archived',
-      'Archived contacts cannot receive messages',
-      409
-    );
+    throw new SendMessageError('contact_archived', 'Archived contacts cannot receive messages', 409);
   }
 
   return contact as EligibleContact;
@@ -152,8 +125,7 @@ export function validateSendMessageParams(params: {
   templateName?: string | null;
   interactivePayload?: InteractiveMessagePayload | null;
 }): void {
-  const { messageType, contentText, mediaUrl, templateName, interactivePayload } =
-    params;
+  const { messageType, contentText, mediaUrl, templateName, interactivePayload } = params;
 
   if (!messageType) {
     throw new SendMessageError('bad_request', 'message_type is required', 400);
@@ -162,27 +134,15 @@ export function validateSendMessageParams(params: {
   const isMediaKind = (MEDIA_KINDS as readonly string[]).includes(messageType);
 
   if (!(VALID_MESSAGE_TYPES as readonly string[]).includes(messageType)) {
-    throw new SendMessageError(
-      'bad_request',
-      `Unsupported message_type "${messageType}"`,
-      400
-    );
+    throw new SendMessageError('bad_request', `Unsupported message_type "${messageType}"`, 400);
   }
 
   if (messageType === 'text' && !contentText) {
-    throw new SendMessageError(
-      'bad_request',
-      'content_text is required for text messages',
-      400
-    );
+    throw new SendMessageError('bad_request', 'content_text is required for text messages', 400);
   }
 
   if (messageType === 'template' && !templateName) {
-    throw new SendMessageError(
-      'bad_request',
-      'template_name is required for template messages',
-      400
-    );
+    throw new SendMessageError('bad_request', 'template_name is required for template messages', 400);
   }
 
   // Interactive: validate the full structured payload against Meta's
@@ -195,25 +155,12 @@ export function validateSendMessageParams(params: {
   }
 
   if (isMediaKind && !mediaUrl) {
-    throw new SendMessageError(
-      'bad_request',
-      `media_url is required for ${messageType} messages`,
-      400
-    );
+    throw new SendMessageError('bad_request', `media_url is required for ${messageType} messages`, 400);
   }
 
   // Meta caps media captions at 1024 chars (audio carries none).
-  if (
-    isMediaKind &&
-    messageType !== 'audio' &&
-    typeof contentText === 'string' &&
-    contentText.length > 1024
-  ) {
-    throw new SendMessageError(
-      'bad_request',
-      'Caption exceeds the 1024-character limit',
-      400
-    );
+  if (isMediaKind && messageType !== 'audio' && typeof contentText === 'string' && contentText.length > 1024) {
+    throw new SendMessageError('bad_request', 'Caption exceeds the 1024-character limit', 400);
   }
 }
 
@@ -237,11 +184,7 @@ export async function sendMessageToConversation(
   } = params;
 
   if (!conversationId) {
-    throw new SendMessageError(
-      'bad_request',
-      'conversation_id is required',
-      400
-    );
+    throw new SendMessageError('bad_request', 'conversation_id is required', 400);
   }
 
   validateSendMessageParams({
@@ -251,6 +194,13 @@ export async function sendMessageToConversation(
     templateName,
     interactivePayload,
   });
+
+  // validateSendMessageParams above throws if any required field is missing
+  // for the chosen messageType; narrow the types so downstream calls don't need `!`.
+  const safeTemplateName = templateName as string;
+  const safeMediaUrl = mediaUrl as string;
+  const safeContentText = contentText as string;
+  const safeInteractivePayload = interactivePayload as NonNullable<typeof interactivePayload>;
 
   const isMediaKind = (MEDIA_KINDS as readonly string[]).includes(messageType);
 
@@ -268,26 +218,14 @@ export async function sendMessageToConversation(
 
   let contact = conversation.contact;
   if (!contact?.id) {
-    throw new SendMessageError(
-      'contact_ineligible',
-      'Contact is no longer eligible to receive messages',
-      409
-    );
+    throw new SendMessageError('contact_ineligible', 'Contact is no longer eligible to receive messages', 409);
   }
 
   // WhatsApp config, account-scoped.
-  const { data: config, error: configError } = await db
-    .from('whatsapp_config')
-    .select('*')
-    .eq('account_id', accountId)
-    .single();
+  const { data: config, error: configError } = await db.from('whatsapp_config').select('*').eq('account_id', accountId).single();
 
   if (configError || !config) {
-    throw new SendMessageError(
-      'whatsapp_not_configured',
-      'WhatsApp not configured. Please set up your WhatsApp integration first.',
-      400
-    );
+    throw new SendMessageError('whatsapp_not_configured', 'WhatsApp not configured. Please set up your WhatsApp integration first.', 400);
   }
 
   const accessToken = decrypt(config.access_token);
@@ -300,10 +238,7 @@ export async function sendMessageToConversation(
       .eq('id', config.id)
       .then(({ error }: { error: { message: string } | null }) => {
         if (error) {
-          console.warn(
-            '[send-message] access_token GCM upgrade failed:',
-            error.message
-          );
+          console.warn('[send-message] access_token GCM upgrade failed:', error.message);
         }
       });
   }
@@ -321,16 +256,10 @@ export async function sendMessageToConversation(
       .maybeSingle();
 
     if (parentError || !parent) {
-      throw new SendMessageError(
-        'bad_request',
-        'reply_to_message_id not found in this conversation',
-        400
-      );
+      throw new SendMessageError('bad_request', 'reply_to_message_id not found in this conversation', 400);
     }
     if (!parent.message_id) {
-      console.warn(
-        '[send-message] reply target has no Meta message_id; sending without context'
-      );
+      console.warn('[send-message] reply target has no Meta message_id; sending without context');
     } else {
       contextMessageId = parent.message_id;
     }
@@ -361,19 +290,11 @@ export async function sendMessageToConversation(
   // archiving that happens while this request is in flight still blocks Meta.
   contact = await requireEligibleContact(db, accountId, contact.id);
   if (!contact.phone) {
-    throw new SendMessageError(
-      'bad_request',
-      'Contact phone number not found',
-      400
-    );
+    throw new SendMessageError('bad_request', 'Contact phone number not found', 400);
   }
   const sanitizedPhone = sanitizePhoneForMeta(contact.phone);
   if (!isValidE164(sanitizedPhone)) {
-    throw new SendMessageError(
-      'bad_request',
-      'Invalid phone number format',
-      400
-    );
+    throw new SendMessageError('bad_request', 'Invalid phone number format', 400);
   }
 
   const attempt = async (phone: string): Promise<string> => {
@@ -384,7 +305,7 @@ export async function sendMessageToConversation(
         phoneNumberId: config.phone_number_id,
         accessToken,
         to: phone,
-        templateName: templateName!,
+        templateName: safeTemplateName,
         language: templateLanguage || 'en_US',
         template: templateRow ?? undefined,
         messageParams: templateMessageParams ?? undefined,
@@ -399,7 +320,7 @@ export async function sendMessageToConversation(
         accessToken,
         to: phone,
         kind: messageType as MediaKind,
-        link: mediaUrl!,
+        link: safeMediaUrl,
         caption: contentText || undefined,
         filename: filename || undefined,
         contextMessageId,
@@ -407,7 +328,7 @@ export async function sendMessageToConversation(
       return result.messageId;
     }
     if (messageType === 'interactive') {
-      const p = interactivePayload!;
+      const p = safeInteractivePayload;
       if (p.kind === 'buttons') {
         const result = await sendInteractiveButtons({
           phoneNumberId: config.phone_number_id,
@@ -438,7 +359,7 @@ export async function sendMessageToConversation(
       phoneNumberId: config.phone_number_id,
       accessToken,
       to: phone,
-      text: contentText!,
+      text: safeContentText,
       contextMessageId,
     });
     return result.messageId;
@@ -465,31 +386,22 @@ export async function sendMessageToConversation(
           throw err;
         }
         lastError = err;
-        console.warn(
-          `[send-message] variant "${variant}" rejected by Meta, trying next…`
-        );
+        console.warn(`[send-message] variant "${variant}" rejected by Meta, trying next…`);
       }
     }
 
     if (lastError) throw lastError;
   } catch (err) {
     if (err instanceof SendMessageError) throw err;
-    const message =
-      err instanceof Error ? err.message : 'Unknown Meta API error';
+    const message = err instanceof Error ? err.message : 'Unknown Meta API error';
     console.error('[send-message] Meta send failed for all variants:', message);
     throw new SendMessageError('meta_error', `Meta API error: ${message}`, 502);
   }
 
   if (workingPhone !== sanitizedPhone) {
     await requireEligibleContact(db, accountId, contact.id);
-    console.log(
-      `[send-message] Auto-corrected contact phone: ${sanitizedPhone} → ${workingPhone}`
-    );
-    await db
-      .from('contacts')
-      .update({ phone: workingPhone })
-      .eq('id', contact.id)
-      .is('archived_at', null);
+    console.log(`[send-message] Auto-corrected contact phone: ${sanitizedPhone} → ${workingPhone}`);
+    await db.from('contacts').update({ phone: workingPhone }).eq('id', contact.id).is('archived_at', null);
   }
 
   // Persist the sent message. Field names MUST match the messages
@@ -497,8 +409,7 @@ export async function sendMessageToConversation(
   // Interactive messages persist the body as content_text (so the
   // conversation-list preview reads sensibly) plus the full structured
   // payload so the thread can re-render the buttons / rows.
-  const interactiveBody =
-    messageType === 'interactive' ? interactivePayload!.body : null;
+  const interactiveBody = messageType === 'interactive' ? interactivePayload?.body : null;
 
   const { data: messageRecord, error: msgError } = await db
     .from('messages')
@@ -509,8 +420,7 @@ export async function sendMessageToConversation(
       content_text: interactiveBody ?? contentText ?? null,
       media_url: mediaUrl || null,
       template_name: templateName || null,
-      interactive_payload:
-        messageType === 'interactive' ? interactivePayload : null,
+      interactive_payload: messageType === 'interactive' ? interactivePayload : null,
       message_id: waMessageId,
       status: 'sent',
       reply_to_message_id: replyToMessageId || null,
@@ -520,17 +430,11 @@ export async function sendMessageToConversation(
 
   if (msgError) {
     console.error('[send-message] error inserting sent message:', msgError);
-    throw new SendMessageError(
-      'db_error',
-      `Message sent to Meta but failed to save to DB: ${msgError.message}`,
-      500
-    );
+    throw new SendMessageError('db_error', `Message sent to Meta but failed to save to DB: ${msgError.message}`, 500);
   }
 
   const lastMessageText =
-    messageType === 'interactive'
-      ? interactivePayloadPreviewText(interactivePayload!)
-      : contentText || `[${messageType}]`;
+    messageType === 'interactive' ? interactivePayloadPreviewText(safeInteractivePayload) : contentText || `[${messageType}]`;
 
   await db
     .from('conversations')
@@ -558,10 +462,7 @@ export async function sendMessageToConversation(
       console.error('[flows] pause-on-agent-send failed:', pauseErr.message);
     }
   } catch (err) {
-    console.error(
-      '[flows] pause-on-agent-send threw:',
-      err instanceof Error ? err.message : err
-    );
+    console.error('[flows] pause-on-agent-send threw:', err instanceof Error ? err.message : err);
   }
 
   return { messageId: messageRecord.id, whatsappMessageId: waMessageId };

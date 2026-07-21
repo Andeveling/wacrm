@@ -126,10 +126,7 @@ export function resolveVariables(
  * Bulk-fetch contact_custom_values for a set of contacts. Returns an
  * index keyed by contact_id → field_id → value.
  */
-async function fetchCustomValueIndex(
-  supabase: ReturnType<typeof createClient>,
-  contactIds: string[]
-): Promise<CustomValueIndex> {
+async function fetchCustomValueIndex(supabase: ReturnType<typeof createClient>, contactIds: string[]): Promise<CustomValueIndex> {
   const index: CustomValueIndex = new Map();
   if (contactIds.length === 0) return index;
 
@@ -138,10 +135,7 @@ async function fetchCustomValueIndex(
   const PAGE = 500;
   for (let i = 0; i < contactIds.length; i += PAGE) {
     const slice = contactIds.slice(i, i + PAGE);
-    const { data } = await supabase
-      .from('contact_custom_values')
-      .select('contact_id, custom_field_id, value')
-      .in('contact_id', slice);
+    const { data } = await supabase.from('contact_custom_values').select('contact_id, custom_field_id, value').in('contact_id', slice);
 
     for (const row of data ?? []) {
       const bucket = index.get(row.contact_id) ?? new Map<string, string>();
@@ -167,43 +161,22 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     let archivedCsvRowsExcluded = 0;
 
     if (audience.type === 'all') {
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('*')
-        .is('archived_at', null);
+      const { data, error } = await supabase.from('contacts').select('*').is('archived_at', null);
       if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
       contacts = data ?? [];
-    } else if (
-      audience.type === 'tags' &&
-      audience.tagIds &&
-      audience.tagIds.length > 0
-    ) {
-      const { data: contactTags, error: tagError } = await supabase
-        .from('contact_tags')
-        .select('contact_id')
-        .in('tag_id', audience.tagIds);
+    } else if (audience.type === 'tags' && audience.tagIds && audience.tagIds.length > 0) {
+      const { data: contactTags, error: tagError } = await supabase.from('contact_tags').select('contact_id').in('tag_id', audience.tagIds);
 
-      if (tagError)
-        throw new Error(`Failed to fetch contact tags: ${tagError.message}`);
+      if (tagError) throw new Error(`Failed to fetch contact tags: ${tagError.message}`);
 
       if (contactTags && contactTags.length > 0) {
-        const uniqueContactIds = [
-          ...new Set(contactTags.map((ct) => ct.contact_id)),
-        ];
-        const { data, error } = await supabase
-          .from('contacts')
-          .select('*')
-          .in('id', uniqueContactIds)
-          .is('archived_at', null);
-        if (error)
-          throw new Error(`Failed to fetch contacts: ${error.message}`);
+        const uniqueContactIds = [...new Set(contactTags.map((ct) => ct.contact_id))];
+        const { data, error } = await supabase.from('contacts').select('*').in('id', uniqueContactIds).is('archived_at', null);
+        if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
         contacts = data ?? [];
       }
     } else if (audience.type === 'custom_field' && audience.customField) {
-      contacts = await resolveCustomFieldAudience(
-        supabase,
-        audience.customField
-      );
+      contacts = await resolveCustomFieldAudience(supabase, audience.customField);
     } else if (audience.type === 'csv' && audience.csvContacts) {
       const result = await upsertCsvContacts(supabase, audience.csvContacts);
       contacts = result.contacts;
@@ -213,10 +186,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     // Apply exclude tags (works across all contact-derived audience
     // types). CSV contacts are synthetic so exclusion doesn't apply.
     if (audience.excludeTagIds && audience.excludeTagIds.length > 0) {
-      const { data: excludeRows } = await supabase
-        .from('contact_tags')
-        .select('contact_id')
-        .in('tag_id', audience.excludeTagIds);
+      const { data: excludeRows } = await supabase.from('contact_tags').select('contact_id').in('tag_id', audience.excludeTagIds);
       const excludedIds = new Set((excludeRows ?? []).map((r) => r.contact_id));
       contacts = contacts.filter((c) => !excludedIds.has(c.id));
     }
@@ -265,44 +235,30 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
     };
   }
 
-  async function resolveCustomFieldAudience(
-    supabase: ReturnType<typeof createClient>,
-    filter: CustomFieldFilter
-  ): Promise<Contact[]> {
+  async function resolveCustomFieldAudience(supabase: ReturnType<typeof createClient>, filter: CustomFieldFilter): Promise<Contact[]> {
     const { fieldId, operator, value } = filter;
 
     // Build the WHERE clause for the operator. PostgREST supports
     // eq/neq/ilike via the query builder — use ilike with wildcards
     // for "contains" so the match is case-insensitive.
-    let query = supabase
-      .from('contact_custom_values')
-      .select('contact_id')
-      .eq('custom_field_id', fieldId);
+    let query = supabase.from('contact_custom_values').select('contact_id').eq('custom_field_id', fieldId);
 
     if (operator === 'is') query = query.eq('value', value);
     else if (operator === 'is_not') query = query.neq('value', value);
-    else if (operator === 'contains')
-      query = query.ilike('value', `%${value}%`);
+    else if (operator === 'contains') query = query.ilike('value', `%${value}%`);
 
     const { data: matches, error: matchErr } = await query;
-    if (matchErr)
-      throw new Error(`Custom-field filter failed: ${matchErr.message}`);
+    if (matchErr) throw new Error(`Custom-field filter failed: ${matchErr.message}`);
 
     const contactIds = [...new Set((matches ?? []).map((m) => m.contact_id))];
     if (contactIds.length === 0) return [];
 
-    const { data, error } = await supabase
-      .from('contacts')
-      .select('*')
-      .in('id', contactIds)
-      .is('archived_at', null);
+    const { data, error } = await supabase.from('contacts').select('*').in('id', contactIds).is('archived_at', null);
     if (error) throw new Error(`Failed to fetch contacts: ${error.message}`);
     return data ?? [];
   }
 
-  async function createAndSendBroadcast(
-    payload: BroadcastPayload
-  ): Promise<{ id: string; archivedCsvRowsExcluded: number }> {
+  async function createAndSendBroadcast(payload: BroadcastPayload): Promise<{ id: string; archivedCsvRowsExcluded: number }> {
     setIsProcessing(true);
     setProgress(0);
 
@@ -327,9 +283,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       // ── Step 1: Resolve audience contacts ─────────────────────────
       setProgress(5);
-      const { contacts, archivedCsvRowsExcluded } = await resolveAudience(
-        payload.audience
-      );
+      const { contacts, archivedCsvRowsExcluded } = await resolveAudience(payload.audience);
 
       if (contacts.length === 0) {
         throw new Error('No contacts found for this audience.');
@@ -365,9 +319,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
         .single();
 
       if (broadcastError || !broadcast) {
-        throw new Error(
-          `Failed to create broadcast: ${broadcastError?.message ?? 'unknown error'}`
-        );
+        throw new Error(`Failed to create broadcast: ${broadcastError?.message ?? 'unknown error'}`);
       }
 
       // ── Step 3: Insert recipient rows ─────────────────────────────
@@ -381,9 +333,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       for (let i = 0; i < recipientRows.length; i += INSERT_BATCH_SIZE) {
         const batch = recipientRows.slice(i, i + INSERT_BATCH_SIZE);
-        const { error: recipientError } = await supabase
-          .from('broadcast_recipients')
-          .insert(batch);
+        const { error: recipientError } = await supabase.from('broadcast_recipients').insert(batch);
         if (recipientError) {
           // Previous impl logged and marched on — the broadcast then ran
           // with an incomplete recipient set, so webhook status updates
@@ -397,9 +347,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
               failed_count: contacts.length,
             })
             .eq('id', broadcast.id);
-          throw new Error(
-            `Failed to insert recipient batch ${i / INSERT_BATCH_SIZE + 1}: ${recipientError.message}`
-          );
+          throw new Error(`Failed to insert recipient batch ${i / INSERT_BATCH_SIZE + 1}: ${recipientError.message}`);
         }
       }
 
@@ -416,13 +364,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
 
       // One bulk fetch of custom values for every contact in this
       // broadcast, avoiding N+1 during the send loop.
-      const contactIds = recipients
-        .map((r) => r.contact?.id)
-        .filter((id): id is string => Boolean(id));
-      const customValueIndex = await fetchCustomValueIndex(
-        supabase,
-        contactIds
-      );
+      const contactIds = recipients.map((r) => r.contact?.id).filter((id): id is string => Boolean(id));
+      const customValueIndex = await fetchCustomValueIndex(supabase, contactIds);
 
       let failedCount = 0;
       const totalRecipients = recipients.length;
@@ -432,13 +375,9 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       // to all recipients; falls back to the template's stored URL on the
       // server when omitted.
       const headerType = payload.template.header_type;
-      const isMediaHeader =
-        headerType === 'image' ||
-        headerType === 'video' ||
-        headerType === 'document';
+      const isMediaHeader = headerType === 'image' || headerType === 'video' || headerType === 'document';
       const headerMediaUrl = payload.headerMediaUrl?.trim();
-      const messageParams =
-        isMediaHeader && headerMediaUrl ? { headerMediaUrl } : undefined;
+      const messageParams = isMediaHeader && headerMediaUrl ? { headerMediaUrl } : undefined;
 
       for (let i = 0; i < recipients.length; i += SEND_BATCH_SIZE) {
         const batch = recipients.slice(i, i + SEND_BATCH_SIZE);
@@ -447,14 +386,8 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           .filter((r) => r.contact?.phone)
           .map((r) => ({
             recipient_id: r.id,
-            phone: r.contact!.phone as string,
-            params: r.contact
-              ? resolveVariables(
-                  payload.variables,
-                  r.contact,
-                  customValueIndex.get(r.contact.id)
-                )
-              : [],
+            phone: r.contact?.phone as string,
+            params: r.contact ? resolveVariables(payload.variables, r.contact, customValueIndex.get(r.contact.id)) : [],
             ...(messageParams ? { messageParams } : {}),
           }));
 
@@ -498,8 +431,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
           failedCount += batch.length;
         }
 
-        const progressPct =
-          30 + Math.round(((i + batch.length) / totalRecipients) * 60);
+        const progressPct = 30 + Math.round(((i + batch.length) / totalRecipients) * 60);
         setProgress(progressPct);
 
         if (i + SEND_BATCH_SIZE < recipients.length) {
@@ -512,10 +444,7 @@ export function useBroadcastSending(): UseBroadcastSendingReturn {
       // 003); we only flip the final status here.
       setProgress(95);
       const finalStatus = failedCount === totalRecipients ? 'failed' : 'sent';
-      await supabase
-        .from('broadcasts')
-        .update({ status: finalStatus })
-        .eq('id', broadcast.id);
+      await supabase.from('broadcasts').update({ status: finalStatus }).eq('id', broadcast.id);
 
       setProgress(100);
       return { id: broadcast.id, archivedCsvRowsExcluded };

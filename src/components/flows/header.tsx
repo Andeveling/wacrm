@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * Editor toolbar — flow name / description, status chip, dirty
@@ -22,40 +22,16 @@
  * /flows/[id]/runs) — those don't belong in the hook.
  */
 
-import { useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  CircleDot,
-  History,
-  Loader2,
-  PauseCircle,
-  PlayCircle,
-  Save,
-  Trash2,
-  Workflow,
-} from "lucide-react";
+import { ArrowLeft, CircleDot, History, Loader2, PauseCircle, PlayCircle, Save, Trash2, Workflow } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import {
-  useFlowEditor,
-  type BuilderState,
-} from "./flow-editor-state";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import { type BuilderState, useFlowEditor } from './flow-editor-state';
 
 export function EditorHeader() {
   const router = useRouter();
-  const {
-    flow,
-    state,
-    setState,
-    dirty,
-    saving,
-    activating,
-    canActivate,
-    save,
-    setStatus,
-    deleteFlow,
-  } = useFlowEditor();
+  const { flow, state, setState, dirty, saving, activating, canActivate, save, setStatus, deleteFlow } = useFlowEditor();
 
   return (
     <div className="flex flex-col gap-1.5 px-6 pt-5">
@@ -63,7 +39,7 @@ export function EditorHeader() {
         {/* ---- left: back · icon · name · status · edited ---- */}
         <button
           type="button"
-          onClick={() => router.push("/flows")}
+          onClick={() => router.push('/flows')}
           title="Back to Flows"
           aria-label="Back to Flows"
           className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -79,12 +55,12 @@ export function EditorHeader() {
           placeholder="Flow name"
           spellCheck={false}
           aria-label="Flow name"
-          className="min-w-[120px] max-w-[340px] rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-bold leading-tight tracking-tight text-foreground outline-none transition-colors hover:bg-muted focus:border-primary focus:bg-transparent focus:shadow-[0_0_0_3px_var(--primary-soft)]"
+          className="min-w-[120px] max-w-[340px] rounded-lg border border-transparent bg-transparent px-2 py-1 font-bold text-foreground text-lg leading-tight tracking-tight outline-none transition-colors hover:bg-muted focus:border-primary focus:bg-transparent focus:shadow-[0_0_0_3px_var(--primary-soft)]"
         />
         <StatusChip status={state.status} />
         {dirty && (
           <span
-            className="inline-flex shrink-0 items-center gap-1.5 text-[10px] font-medium uppercase tracking-wide text-amber-300"
+            className="inline-flex shrink-0 items-center gap-1.5 font-medium text-[10px] text-amber-300 uppercase tracking-wide"
             title="Unsaved changes — hit Save to persist"
             aria-live="polite"
           >
@@ -95,11 +71,7 @@ export function EditorHeader() {
 
         {/* ---- right: runs · delete · activate · save ---- */}
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push(`/flows/${flow.id}/runs`)}
-          >
+          <Button variant="ghost" size="sm" onClick={() => router.push(`/flows/${flow.id}/runs`)}>
             <History className="h-3.5 w-3.5" />
             Runs
             <span className="ml-0.5 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
@@ -115,46 +87,25 @@ export function EditorHeader() {
             <Trash2 className="h-3.5 w-3.5" />
             Delete
           </Button>
-          {state.status === "active" ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => void setStatus("draft")}
-              disabled={activating}
-            >
-              {activating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <PauseCircle className="h-3.5 w-3.5" />
-              )}
+          {state.status === 'active' ? (
+            <Button variant="outline" size="sm" onClick={() => void setStatus('draft')} disabled={activating}>
+              {activating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PauseCircle className="h-3.5 w-3.5" />}
               Pause
             </Button>
           ) : (
             <Button
               variant="outline"
               size="sm"
-              onClick={() => void setStatus("active")}
+              onClick={() => void setStatus('active')}
               disabled={activating || !canActivate}
-              title={
-                !canActivate
-                  ? "Fix the issues below before activating"
-                  : undefined
-              }
+              title={!canActivate ? 'Fix the issues below before activating' : undefined}
             >
-              {activating ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <PlayCircle className="h-3.5 w-3.5" />
-              )}
+              {activating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />}
               Activate
             </Button>
           )}
           <Button onClick={() => void save()} disabled={saving} size="sm">
-            {saving ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Save className="h-3.5 w-3.5" />
-            )}
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
             Save
           </Button>
         </div>
@@ -163,9 +114,7 @@ export function EditorHeader() {
       {/* ---- description note (subtle, inline-editable) ---- */}
       <input
         value={state.description}
-        onChange={(e) =>
-          setState((s) => ({ ...s, description: e.target.value }))
-        }
+        onChange={(e) => setState((s) => ({ ...s, description: e.target.value }))}
         placeholder="Add a short description (internal — customers don't see this)"
         aria-label="Flow description"
         className="w-full max-w-[78ch] rounded-md border border-transparent bg-transparent px-2 py-1 text-[13px] text-muted-foreground outline-none transition-colors placeholder:text-muted-foreground/60 hover:bg-muted/50 focus:border-primary focus:bg-transparent focus:text-foreground"
@@ -174,30 +123,25 @@ export function EditorHeader() {
   );
 }
 
-function StatusChip({ status }: { status: BuilderState["status"] }) {
+function StatusChip({ status }: { status: BuilderState['status'] }) {
   const cfg = {
     draft: {
       // Neutral, not amber — amber is reserved for the adjacent
       // "Edited" dirty signal, so the two don't read as the same alert.
-      cls: "border-border bg-muted text-muted-foreground",
-      label: "Draft",
+      cls: 'border-border bg-muted text-muted-foreground',
+      label: 'Draft',
     },
     active: {
-      cls: "border-emerald-600/40 bg-emerald-500/10 text-emerald-300",
-      label: "Active",
+      cls: 'border-emerald-600/40 bg-emerald-500/10 text-emerald-300',
+      label: 'Active',
     },
     archived: {
-      cls: "border-border bg-muted/50 text-muted-foreground",
-      label: "Archived",
+      cls: 'border-border bg-muted/50 text-muted-foreground',
+      label: 'Archived',
     },
   }[status];
   return (
-    <span
-      className={cn(
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11.5px] font-medium",
-        cfg.cls,
-      )}
-    >
+    <span className={cn('inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium text-[11.5px]', cfg.cls)}>
       <CircleDot className="h-3 w-3" />
       {cfg.label}
     </span>

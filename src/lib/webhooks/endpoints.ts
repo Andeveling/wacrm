@@ -15,8 +15,7 @@ export const WEBHOOK_SECRET_PREFIX = 'whsec_';
  * Columns safe to return over the API — everything except the
  * (encrypted) `secret`, which is only ever surfaced once at creation.
  */
-export const WEBHOOK_PUBLIC_COLUMNS =
-  'id, url, events, is_active, last_delivery_at, failure_count, created_at';
+export const WEBHOOK_PUBLIC_COLUMNS = 'id, url, events, is_active, last_delivery_at, failure_count, created_at';
 
 export interface ApiWebhookEndpoint {
   id: string;
@@ -34,9 +33,7 @@ export function generateWebhookSecret(): string {
 }
 
 /** Project a `WEBHOOK_PUBLIC_COLUMNS` row into the API shape. */
-export function serializeWebhookEndpoint(
-  row: Record<string, unknown>
-): ApiWebhookEndpoint {
+export function serializeWebhookEndpoint(row: Record<string, unknown>): ApiWebhookEndpoint {
   return {
     id: row.id as string,
     url: row.url as string,

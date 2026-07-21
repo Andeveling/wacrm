@@ -1,15 +1,10 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
+import { type ReactNode, useEffect, useRef } from 'react';
 
 import { cn } from '@/lib/utils';
-import {
-  RAIL_GROUPS,
-  SECTION_META,
-  SETTINGS_SECTIONS,
-  type SettingsSection,
-} from './settings-sections';
+import { RAIL_GROUPS, SECTION_META, SETTINGS_SECTIONS, type SettingsSection } from './settings-sections';
 
 // Width at/above which the rail is a vertical column (already in view, so
 // no auto-scroll needed). Mirrors the Tailwind `lg:` breakpoint that
@@ -44,28 +39,23 @@ export function SettingsRail({
       block: 'nearest',
       behavior: 'smooth',
     });
-  }, [active]);
+  }, []);
 
   return (
     <nav
       aria-label="Settings sections"
       className={cn(
         'flex gap-1 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden',
-        'border-b border-border',
-        'lg:sticky lg:top-0 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0',
+        'border-border border-b',
+        'lg:sticky lg:top-0 lg:flex-col lg:overflow-visible lg:border-b-0 lg:pb-0'
       )}
     >
       {RAIL_GROUPS.map(({ label, group }) => {
-        const items = SETTINGS_SECTIONS.filter(
-          (s) => SECTION_META[s].group === group,
-        );
+        const items = SETTINGS_SECTIONS.filter((s) => SECTION_META[s].group === group);
         return (
-          <div
-            key={group}
-            className="flex shrink-0 gap-1 lg:flex-col lg:gap-0.5"
-          >
+          <div key={group} className="flex shrink-0 gap-1 lg:flex-col lg:gap-0.5">
             {label ? (
-              <div className="hidden px-3 pt-3.5 pb-1.5 text-[11px] font-semibold tracking-[0.09em] text-muted-foreground uppercase lg:block">
+              <div className="hidden px-3 pt-3.5 pb-1.5 font-semibold text-[11px] text-muted-foreground uppercase tracking-[0.09em] lg:block">
                 {t(`groups.${group}`)}
               </div>
             ) : null}
@@ -81,11 +71,9 @@ export function SettingsRail({
                   onClick={() => onSelect(s)}
                   aria-current={isActive ? 'page' : undefined}
                   className={cn(
-                    'flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium whitespace-nowrap transition-colors',
+                    'flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 py-2 text-left font-medium text-sm transition-colors',
                     'lg:w-full',
-                    isActive
-                      ? 'bg-primary-soft text-primary'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    isActive ? 'bg-primary-soft text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                   )}
                 >
                   <Icon className="size-4 shrink-0" />
@@ -94,7 +82,7 @@ export function SettingsRail({
                     <span
                       className={cn(
                         'hidden items-center gap-1.5 text-xs lg:inline-flex',
-                        isActive ? 'text-primary' : 'text-muted-foreground',
+                        isActive ? 'text-primary' : 'text-muted-foreground'
                       )}
                     >
                       {hints[s]}

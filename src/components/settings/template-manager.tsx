@@ -1,57 +1,24 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Loader2, Pencil, Plus, RefreshCw, RotateCcw, Trash2, Upload, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  Plus,
-  Trash2,
-  Loader2,
-  RefreshCw,
-  AlertCircle,
-  X,
-  Pencil,
-  RotateCcw,
-  Upload,
-} from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
-import {
-  uploadAccountMedia,
-  MEDIA_MAX_BYTES_BY_KIND,
-} from '@/lib/storage/upload-media';
-import { useAuth } from '@/hooks/use-auth';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { useTranslations } from 'next-intl';
-import { Card, CardContent } from '@/components/ui/card';
-import { SettingsPanelHead } from './settings-panel-head';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import type {
-  MessageTemplate,
-  TemplateButton,
-  TemplateSampleValues,
-} from '@/types';
+import { useAuth } from '@/hooks/use-auth';
+import { MEDIA_MAX_BYTES_BY_KIND, uploadAccountMedia } from '@/lib/storage/upload-media';
+import { createClient } from '@/lib/supabase/client';
 import { templateStatusConfig } from '@/lib/template-status';
-import {
-  extractVariableIndices,
-  TEMPLATE_LIMITS,
-} from '@/lib/whatsapp/template-validators';
+import { extractVariableIndices, TEMPLATE_LIMITS } from '@/lib/whatsapp/template-validators';
+import type { MessageTemplate, TemplateButton, TemplateSampleValues } from '@/types';
+import { SettingsPanelHead } from './settings-panel-head';
 
 const CATEGORIES = ['Marketing', 'Utility', 'Authentication'] as const;
 type HeaderFormat = 'none' | 'text' | 'image' | 'video' | 'document';
@@ -126,7 +93,6 @@ function emptyButton(type: TemplateButton['type']): TemplateButton {
 
 export function TemplateManager() {
   const t = useTranslations('Settings.templates');
-  const supabase = createClient();
   const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(true);
@@ -143,8 +109,7 @@ export function TemplateManager() {
   // Template selected for the confirm-delete dialog. The destructive
   // action goes through this two-step so a slip on the trash icon
   // doesn't take the template off Meta as well as locally.
-  const [templateToDelete, setTemplateToDelete] =
-    useState<MessageTemplate | null>(null);
+  const [templateToDelete, setTemplateToDelete] = useState<MessageTemplate | null>(null);
   // Header-image upload (issue #230). Uploads to the account-scoped
   // chat-media bucket and stores the public URL in header_media_url; the
   // submit route turns that into a Meta Resumable-Upload handle.
@@ -154,16 +119,10 @@ export function TemplateManager() {
   // Body variable indices — `[1, 2, 3]` for "{{1}} {{2}} {{3}}". We
   // re-run the extractor on every render to keep the sample-value rows
   // in sync with what the user typed.
-  const bodyVarCount = useMemo(
-    () => extractVariableIndices(form.body_text).length,
-    [form.body_text],
-  );
+  const bodyVarCount = useMemo(() => extractVariableIndices(form.body_text).length, [form.body_text]);
   const headerVarCount = useMemo(
-    () =>
-      form.header_format === 'text'
-        ? extractVariableIndices(form.header_content).length
-        : 0,
-    [form.header_format, form.header_content],
+    () => (form.header_format === 'text' ? extractVariableIndices(form.header_content).length : 0),
+    [form.header_format, form.header_content]
   );
 
   // Resize body_samples so it always has exactly bodyVarCount entries.
@@ -177,6 +136,28 @@ export function TemplateManager() {
     });
   }, [bodyVarCount]);
 
+  const fetchTemplates = useCallback(
+    async (userId: string) => {
+      try {
+        setLoading(true);
+        const supabase = createClient();
+        const { data, error } = await supabase
+          .from('message_templates')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setTemplates(data || []);
+      } catch (err) {
+        console.error('Failed to fetch templates:', err);
+        toast.error(t('toastLoadFailed'));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [t]
+  );
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -184,26 +165,7 @@ export function TemplateManager() {
       return;
     }
     fetchTemplates(user.id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user?.id]);
-
-  async function fetchTemplates(userId: string) {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('message_templates')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      setTemplates(data || []);
-    } catch (err) {
-      console.error('Failed to fetch templates:', err);
-      toast.error(t('toastLoadFailed'));
-    } finally {
-      setLoading(false);
-    }
-  }
+  }, [authLoading, user?.id, user, fetchTemplates]);
 
   function buildSubmitPayload() {
     const sample_values: TemplateSampleValues = {};
@@ -219,17 +181,13 @@ export function TemplateManager() {
       category: form.category,
       language: form.language.trim() || 'en_US',
       header_type: form.header_format === 'none' ? undefined : form.header_format,
-      header_content:
-        form.header_format === 'text' ? form.header_content.trim() : undefined,
+      header_content: form.header_format === 'text' ? form.header_content.trim() : undefined,
       header_media_url:
-        form.header_format !== 'none' && form.header_format !== 'text'
-          ? form.header_media_url.trim() || undefined
-          : undefined,
+        form.header_format !== 'none' && form.header_format !== 'text' ? form.header_media_url.trim() || undefined : undefined,
       body_text: form.body_text.trim(),
       footer_text: form.footer_text.trim() || undefined,
       buttons: form.buttons.length > 0 ? form.buttons : undefined,
-      sample_values:
-        Object.keys(sample_values).length > 0 ? sample_values : undefined,
+      sample_values: Object.keys(sample_values).length > 0 ? sample_values : undefined,
     };
   }
 
@@ -264,9 +222,7 @@ export function TemplateManager() {
     try {
       setSubmitting(true);
       const isEdit = editingId !== null;
-      const url = isEdit
-        ? `/api/whatsapp/templates/${editingId}`
-        : '/api/whatsapp/templates/submit';
+      const url = isEdit ? `/api/whatsapp/templates/${editingId}` : '/api/whatsapp/templates/submit';
       const res = await fetch(url, {
         method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -274,9 +230,7 @@ export function TemplateManager() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(
-          data?.error || `${isEdit ? 'Edit' : 'Submit'} failed (HTTP ${res.status})`,
-        );
+        throw new Error(data?.error || `${isEdit ? 'Edit' : 'Submit'} failed (HTTP ${res.status})`);
       }
       // Refresh first, then close — re-opening the dialog
       // immediately should not show a stale list.
@@ -288,7 +242,7 @@ export function TemplateManager() {
             : t('toastSaveNewDry')
           : isEdit
             ? t('toastSubmitEditSuccess')
-            : t('toastSubmitNewSuccess'),
+            : t('toastSubmitNewSuccess')
       );
       setDialogOpen(false);
       setForm(emptyForm);
@@ -312,27 +266,20 @@ export function TemplateManager() {
       }
       toast.success(
         t('toastSyncCount', { total: data.total }) +
-          (data.inserted || data.updated
-            ? t('toastSyncDetails', { inserted: data.inserted, updated: data.updated })
-            : ''),
+          (data.inserted || data.updated ? t('toastSyncDetails', { inserted: data.inserted, updated: data.updated }) : '')
       );
       if (Array.isArray(data.errors) && data.errors.length > 0) {
-        const preview = data.errors.slice(0, 3).map(
-          (e: { name: string; language: string; message: string }) =>
-            `${e.name} (${e.language})`,
-        );
-        const suffix =
-          data.errors.length > 3 ? `, +${data.errors.length - 3} more` : '';
+        const preview = data.errors
+          .slice(0, 3)
+          .map((e: { name: string; language: string; message: string }) => `${e.name} (${e.language})`);
+        const suffix = data.errors.length > 3 ? `, +${data.errors.length - 3} more` : '';
         toast.error(t('toastSyncFailed', { preview: preview.join(', ') + suffix }));
       }
       if (data.truncated) {
         // Use error (not warning) so the message survives long
         // enough to read — sonner's `warning` auto-dismisses on
         // the same short timer as `success`.
-        toast.error(
-          t('toastSyncTruncated'),
-          { duration: 10000 },
-        );
+        toast.error(t('toastSyncTruncated'), { duration: 10000 });
       }
       await fetchTemplates(user.id);
     } catch (err) {
@@ -455,8 +402,7 @@ export function TemplateManager() {
     );
   }
 
-  const headerNeedsMedia =
-    form.header_format !== 'none' && form.header_format !== 'text';
+  const headerNeedsMedia = form.header_format !== 'none' && form.header_format !== 'text';
 
   async function handleHeaderImageFile(file: File) {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
@@ -464,9 +410,7 @@ export function TemplateManager() {
       return;
     }
     if (file.size > MEDIA_MAX_BYTES_BY_KIND.image) {
-      toast.error(
-        t('toastImageTooLarge', { size: (file.size / 1024 / 1024).toFixed(1) }),
-      );
+      toast.error(t('toastImageTooLarge', { size: (file.size / 1024 / 1024).toFixed(1) }));
       return;
     }
     setUploadingHeader(true);
@@ -482,18 +426,13 @@ export function TemplateManager() {
   }
 
   return (
-    <section className="animate-in fade-in-50 space-y-4 duration-200">
+    <section className="fade-in-50 animate-in space-y-4 duration-200">
       <SettingsPanelHead
         title={t('title')}
         description={t('description')}
         action={
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              onClick={handleSyncFromMeta}
-              disabled={syncing}
-              title={t('syncTitle')}
-            >
+            <Button variant="outline" onClick={handleSyncFromMeta} disabled={syncing} title={t('syncTitle')}>
               <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
               {syncing ? t('syncing') : t('syncFromMeta')}
             </Button>
@@ -509,9 +448,7 @@ export function TemplateManager() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">{t('noTemplates')}</p>
-            <p className="text-muted-foreground text-xs mt-1">
-              {t('createFirst')}
-            </p>
+            <p className="mt-1 text-muted-foreground text-xs">{t('createFirst')}</p>
           </CardContent>
         </Card>
       ) : (
@@ -522,25 +459,15 @@ export function TemplateManager() {
             return (
               <Card key={template.id}>
                 <CardContent className="flex items-start justify-between pt-4">
-                  <div className="space-y-2 min-w-0 flex-1">
-                    <div className="flex items-center gap-2 flex-wrap">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3 className="font-medium text-foreground">{template.name}</h3>
-                      <Badge
-                        className={`text-xs border ${categoryColors[template.category] || ''}`}
-                      >
-                        {template.category}
-                      </Badge>
-                      <Badge className={`text-xs border ${status.classes}`}>
-                        {status.label}
-                      </Badge>
-                      {template.language && (
-                        <span className="text-xs text-muted-foreground uppercase">
-                          {template.language}
-                        </span>
-                      )}
+                      <Badge className={`border text-xs ${categoryColors[template.category] || ''}`}>{template.category}</Badge>
+                      <Badge className={`border text-xs ${status.classes}`}>{status.label}</Badge>
+                      {template.language && <span className="text-muted-foreground text-xs uppercase">{template.language}</span>}
                       {template.quality_score && (
                         <span
-                          className={`text-[10px] uppercase font-medium ${
+                          className={`font-medium text-[10px] uppercase ${
                             template.quality_score === 'GREEN'
                               ? 'text-emerald-400'
                               : template.quality_score === 'YELLOW'
@@ -553,24 +480,16 @@ export function TemplateManager() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {template.body_text}
-                    </p>
-                    {template.footer_text && (
-                      <p className="text-xs text-muted-foreground italic">
-                        {template.footer_text}
-                      </p>
-                    )}
+                    <p className="line-clamp-2 text-muted-foreground text-sm">{template.body_text}</p>
+                    {template.footer_text && <p className="text-muted-foreground text-xs italic">{template.footer_text}</p>}
                     {(template.rejection_reason || template.submission_error) && (
-                      <div className="flex items-start gap-1.5 text-xs text-red-400 bg-red-950/20 border border-red-900/40 rounded px-2 py-1.5">
-                        <AlertCircle className="size-3.5 mt-0.5 shrink-0" />
-                        <span>
-                          {template.rejection_reason || template.submission_error}
-                        </span>
+                      <div className="flex items-start gap-1.5 rounded border border-red-900/40 bg-red-950/20 px-2 py-1.5 text-red-400 text-xs">
+                        <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                        <span>{template.rejection_reason || template.submission_error}</span>
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <div className="ml-2 flex shrink-0 items-center gap-1">
                     {statusKey === 'APPROVED' && (
                       <Button
                         variant="ghost"
@@ -578,7 +497,7 @@ export function TemplateManager() {
                         onClick={() => openEdit(template)}
                         title={t('editTitle')}
                         aria-label={t('editLabel')}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 px-2"
+                        className="h-8 px-2 text-muted-foreground hover:bg-primary/10 hover:text-primary"
                       >
                         <Pencil className="size-3.5" />
                         {t('edit')}
@@ -591,7 +510,7 @@ export function TemplateManager() {
                         onClick={() => openEdit(template)}
                         title={t('resubmitTitle')}
                         aria-label={t('resubmitLabel')}
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10 h-8 px-2"
+                        className="h-8 px-2 text-muted-foreground hover:bg-primary/10 hover:text-primary"
                       >
                         <RotateCcw className="size-3.5" />
                         {t('resubmit')}
@@ -602,23 +521,11 @@ export function TemplateManager() {
                       size="icon"
                       onClick={() => setTemplateToDelete(template)}
                       disabled={deletingId === template.id}
-                      aria-label={
-                        template.meta_template_id
-                          ? t('deleteMetaLocallyAria')
-                          : t('deleteLocallyAria')
-                      }
-                      title={
-                        template.meta_template_id
-                          ? t('deleteMetaLocallyTitle')
-                          : t('deleteLocallyTitle')
-                      }
-                      className="text-muted-foreground hover:text-red-400 hover:bg-red-950/30 h-8 w-8"
+                      aria-label={template.meta_template_id ? t('deleteMetaLocallyAria') : t('deleteLocallyAria')}
+                      title={template.meta_template_id ? t('deleteMetaLocallyTitle') : t('deleteLocallyTitle')}
+                      className="h-8 w-8 text-muted-foreground hover:bg-red-950/30 hover:text-red-400"
                     >
-                      {deletingId === template.id ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <Trash2 className="size-4" />
-                      )}
+                      {deletingId === template.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                     </Button>
                   </div>
                 </CardContent>
@@ -638,21 +545,15 @@ export function TemplateManager() {
           }
         }}
       >
-        <DialogContent className="bg-popover border-border sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-border bg-popover sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="text-popover-foreground">
-              {editingId ? t('dialogEditTitle') : t('dialogNewTitle')}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground">
-              {editingId
-                ? t('dialogEditDesc')
-                : t('dialogNewDesc')}
-            </DialogDescription>
+            <DialogTitle className="text-popover-foreground">{editingId ? t('dialogEditTitle') : t('dialogNewTitle')}</DialogTitle>
+            <DialogDescription className="text-muted-foreground">{editingId ? t('dialogEditDesc') : t('dialogNewDesc')}</DialogDescription>
           </DialogHeader>
 
           {form.category === 'Authentication' && (
-            <div className="flex items-start gap-2 rounded border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-xs text-amber-300">
-              <AlertCircle className="size-4 mt-0.5 shrink-0" />
+            <div className="flex items-start gap-2 rounded border border-amber-700/40 bg-amber-950/30 px-3 py-2 text-amber-300 text-xs">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <p>{t.rich('authWarning', { bold: (chunks) => <strong>{chunks}</strong> })}</p>
             </div>
           )}
@@ -665,13 +566,9 @@ export function TemplateManager() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 disabled={editingId !== null}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
               />
-              <p className="text-[11px] text-muted-foreground">
-                {editingId
-                  ? t('nameFixed')
-                  : t('nameHint')}
-              </p>
+              <p className="text-[11px] text-muted-foreground">{editingId ? t('nameFixed') : t('nameHint')}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -686,16 +583,12 @@ export function TemplateManager() {
                     })
                   }
                 >
-                  <SelectTrigger className="w-full bg-muted border-border text-foreground">
+                  <SelectTrigger className="w-full border-border bg-muted text-foreground">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-popover border-border">
+                  <SelectContent className="border-border bg-popover">
                     {CATEGORIES.map((cat) => (
-                      <SelectItem
-                        key={cat}
-                        value={cat}
-                        className="text-popover-foreground focus:bg-muted focus:text-popover-foreground"
-                      >
+                      <SelectItem key={cat} value={cat} className="text-popover-foreground focus:bg-muted focus:text-popover-foreground">
                         {cat}
                       </SelectItem>
                     ))}
@@ -709,11 +602,9 @@ export function TemplateManager() {
                   list="template-language-codes"
                   placeholder="en_US"
                   value={form.language}
-                  onChange={(e) =>
-                    setForm({ ...form, language: e.target.value })
-                  }
+                  onChange={(e) => setForm({ ...form, language: e.target.value })}
                   disabled={editingId !== null}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-60"
                 />
                 <datalist id="template-language-codes">
                   {COMMON_LANGUAGE_CODES.map((code) => (
@@ -721,11 +612,7 @@ export function TemplateManager() {
                   ))}
                 </datalist>
                 <p className="text-[11px] text-muted-foreground">
-                  {editingId ? (
-                    t('langFixed')
-                  ) : (
-                    <span>{t.rich('langHint', { code: (chunks) => <code>{chunks}</code> })}</span>
-                  )}
+                  {editingId ? t('langFixed') : <span>{t.rich('langHint', { code: (chunks) => <code>{chunks}</code> })}</span>}
                 </p>
               </div>
             </div>
@@ -747,16 +634,12 @@ export function TemplateManager() {
                   })
                 }
               >
-                <SelectTrigger className="w-full bg-muted border-border text-foreground">
+                <SelectTrigger className="w-full border-border bg-muted text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-popover border-border">
+                <SelectContent className="border-border bg-popover">
                   {HEADER_FORMATS.map((type) => (
-                    <SelectItem
-                      key={type}
-                      value={type}
-                      className="text-popover-foreground focus:bg-muted focus:text-popover-foreground"
-                    >
+                    <SelectItem key={type} value={type} className="text-popover-foreground focus:bg-muted focus:text-popover-foreground">
                       {type === 'none'
                         ? t('headerNone')
                         : type === 'text'
@@ -772,17 +655,15 @@ export function TemplateManager() {
               </Select>
 
               {form.header_format === 'text' && (
-                <div className="space-y-2 mt-2">
+                <div className="mt-2 space-y-2">
                   <Input
                     id="template-header-text"
                     aria-label="Header text"
                     placeholder={t('headerTextPlaceholder')}
                     value={form.header_content}
-                    onChange={(e) =>
-                      setForm({ ...form, header_content: e.target.value })
-                    }
+                    onChange={(e) => setForm({ ...form, header_content: e.target.value })}
                     maxLength={TEMPLATE_LIMITS.headerTextMaxLength}
-                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                    className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                   />
                   {headerVarCount > 0 && (
                     <Input
@@ -790,17 +671,15 @@ export function TemplateManager() {
                       aria-label={t('headerSampleAria')}
                       placeholder={t('headerSamplePlaceholder')}
                       value={form.header_sample}
-                      onChange={(e) =>
-                        setForm({ ...form, header_sample: e.target.value })
-                      }
-                      className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                      onChange={(e) => setForm({ ...form, header_sample: e.target.value })}
+                      className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                     />
                   )}
                 </div>
               )}
 
               {headerNeedsMedia && (
-                <div className="space-y-2 mt-2">
+                <div className="mt-2 space-y-2">
                   {form.header_format === 'image' && (
                     <div className="flex items-center gap-2">
                       <input
@@ -821,25 +700,17 @@ export function TemplateManager() {
                         disabled={uploadingHeader}
                         onClick={() => headerFileRef.current?.click()}
                       >
-                        {uploadingHeader ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <Upload className="h-3.5 w-3.5" />
-                        )}
+                        {uploadingHeader ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
                         {t('uploadImage')}
                       </Button>
-                      <span className="text-[11px] text-muted-foreground">
-                        {t('uploadHint')}
-                      </span>
+                      <span className="text-[11px] text-muted-foreground">{t('uploadHint')}</span>
                     </div>
                   )}
                   <Input
                     placeholder={t('mediaUrlPlaceholder', { format: form.header_format })}
                     value={form.header_media_url}
-                    onChange={(e) =>
-                      setForm({ ...form, header_media_url: e.target.value })
-                    }
-                    className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                    onChange={(e) => setForm({ ...form, header_media_url: e.target.value })}
+                    className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                   />
                   {form.header_format === 'image' && form.header_media_url && (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -850,13 +721,9 @@ export function TemplateManager() {
                     />
                   )}
                   <p className="text-[11px] text-muted-foreground leading-relaxed">
-                    {form.header_format === 'image'
-                      ? t('imageHint')
-                      : t('mediaHint')}
-                    {form.header_format === 'video' &&
-                      t('videoHint')}
-                    {form.header_format === 'document' &&
-                      t('documentHint')}
+                    {form.header_format === 'image' ? t('imageHint') : t('mediaHint')}
+                    {form.header_format === 'video' && t('videoHint')}
+                    {form.header_format === 'document' && t('documentHint')}
                   </p>
                 </div>
               )}
@@ -867,27 +734,21 @@ export function TemplateManager() {
               <Textarea
                 placeholder={t('bodyPlaceholder')}
                 value={form.body_text}
-                onChange={(e) =>
-                  setForm({ ...form, body_text: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, body_text: e.target.value })}
                 rows={4}
                 maxLength={TEMPLATE_LIMITS.bodyMaxLength}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground resize-none"
+                className="resize-none border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
-              <p className="text-[11px] text-muted-foreground">
-                {t('bodyHint')}
-              </p>
+              <p className="text-[11px] text-muted-foreground">{t('bodyHint')}</p>
 
               {bodyVarCount > 0 && (
                 <div className="space-y-1.5 pt-1">
-                  <Label className="text-[11px] text-muted-foreground">
-                    {t('sampleValues')}
-                  </Label>
+                  <Label className="text-[11px] text-muted-foreground">{t('sampleValues')}</Label>
                   {form.body_samples.map((val, i) => {
                     const inputId = `template-body-sample-${i}`;
                     return (
                       <Input
-                        key={i}
+                        key={inputId}
                         id={inputId}
                         aria-label={t('sampleAria', { var: `{{${i + 1}}}` })}
                         placeholder={t('samplePlaceholder', { var: `{{${i + 1}}}` })}
@@ -897,7 +758,7 @@ export function TemplateManager() {
                           next[i] = e.target.value;
                           setForm({ ...form, body_samples: next });
                         }}
-                        className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                        className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                       />
                     );
                   })}
@@ -910,11 +771,9 @@ export function TemplateManager() {
               <Input
                 placeholder={t('footerPlaceholder')}
                 value={form.footer_text}
-                onChange={(e) =>
-                  setForm({ ...form, footer_text: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, footer_text: e.target.value })}
                 maxLength={TEMPLATE_LIMITS.footerMaxLength}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
               />
             </div>
 
@@ -927,23 +786,18 @@ export function TemplateManager() {
                   size="sm"
                   onClick={addButton}
                   disabled={form.buttons.length >= TEMPLATE_LIMITS.maxButtonsTotal}
-                  className="border-border bg-transparent text-muted-foreground hover:bg-muted h-7 text-xs"
+                  className="h-7 border-border bg-transparent text-muted-foreground text-xs hover:bg-muted"
                 >
                   <Plus className="size-3" />
                   {t('addButton')}
                 </Button>
               </div>
               {form.buttons.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground">
-                  {t('buttonsLimit', { max: TEMPLATE_LIMITS.maxButtonsTotal })}
-                </p>
+                <p className="text-[11px] text-muted-foreground">{t('buttonsLimit', { max: TEMPLATE_LIMITS.maxButtonsTotal })}</p>
               ) : (
                 <div className="space-y-2">
                   {form.buttons.map((btn, i) => (
-                    <div
-                      key={i}
-                      className="space-y-2 rounded border border-border bg-muted/50 p-2"
-                    >
+                    <div key={`${btn.type}-${btn.text}`} className="space-y-2 rounded border border-border bg-muted/50 p-2">
                       <div className="flex items-center gap-2">
                         <Select
                           value={btn.type}
@@ -955,20 +809,17 @@ export function TemplateManager() {
                             changeButtonType(i, val as TemplateButton['type']);
                           }}
                         >
-                          <SelectTrigger className="w-40 bg-muted border-border text-foreground h-8 text-xs">
+                          <SelectTrigger className="h-8 w-40 border-border bg-muted text-foreground text-xs">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-popover border-border">
+                          <SelectContent className="border-border bg-popover">
                             <SelectItem
                               value="QUICK_REPLY"
                               className="text-popover-foreground focus:bg-muted focus:text-popover-foreground"
                             >
                               {t('btnQuickReply')}
                             </SelectItem>
-                            <SelectItem
-                              value="URL"
-                              className="text-popover-foreground focus:bg-muted focus:text-popover-foreground"
-                            >
+                            <SelectItem value="URL" className="text-popover-foreground focus:bg-muted focus:text-popover-foreground">
                               {t('btnUrl')}
                             </SelectItem>
                             <SelectItem
@@ -977,10 +828,7 @@ export function TemplateManager() {
                             >
                               {t('btnPhone')}
                             </SelectItem>
-                            <SelectItem
-                              value="COPY_CODE"
-                              className="text-popover-foreground focus:bg-muted focus:text-popover-foreground"
-                            >
+                            <SelectItem value="COPY_CODE" className="text-popover-foreground focus:bg-muted focus:text-popover-foreground">
                               {t('btnCopyCode')}
                             </SelectItem>
                           </SelectContent>
@@ -989,17 +837,15 @@ export function TemplateManager() {
                           placeholder={t('btnLabelPlaceholder')}
                           value={btn.text}
                           maxLength={TEMPLATE_LIMITS.buttonTextMaxLength}
-                          onChange={(e) =>
-                            updateButton(i, { text: e.target.value })
-                          }
-                          className="flex-1 bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                          onChange={(e) => updateButton(i, { text: e.target.value })}
+                          className="h-8 flex-1 border-border bg-muted text-foreground text-xs placeholder:text-muted-foreground"
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="icon"
                           onClick={() => removeButton(i)}
-                          className="text-muted-foreground hover:text-red-400 hover:bg-red-950/30 size-7"
+                          className="size-7 text-muted-foreground hover:bg-red-950/30 hover:text-red-400"
                         >
                           <X className="size-3.5" />
                         </Button>
@@ -1009,19 +855,15 @@ export function TemplateManager() {
                           <Input
                             placeholder={t('urlPlaceholder')}
                             value={btn.url}
-                            onChange={(e) =>
-                              updateButton(i, { url: e.target.value })
-                            }
-                            className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                            onChange={(e) => updateButton(i, { url: e.target.value })}
+                            className="h-8 border-border bg-muted text-foreground text-xs placeholder:text-muted-foreground"
                           />
                           {extractVariableIndices(btn.url).length > 0 && (
                             <Input
                               placeholder={t('urlSamplePlaceholder')}
                               value={btn.example ?? ''}
-                              onChange={(e) =>
-                                updateButton(i, { example: e.target.value })
-                              }
-                              className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                              onChange={(e) => updateButton(i, { example: e.target.value })}
+                              className="h-8 border-border bg-muted text-foreground text-xs placeholder:text-muted-foreground"
                             />
                           )}
                         </div>
@@ -1030,20 +872,16 @@ export function TemplateManager() {
                         <Input
                           placeholder={t('phonePlaceholder')}
                           value={btn.phone_number}
-                          onChange={(e) =>
-                            updateButton(i, { phone_number: e.target.value })
-                          }
-                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                          onChange={(e) => updateButton(i, { phone_number: e.target.value })}
+                          className="h-8 border-border bg-muted text-foreground text-xs placeholder:text-muted-foreground"
                         />
                       )}
                       {btn.type === 'COPY_CODE' && (
                         <Input
                           placeholder={t('codePlaceholder')}
                           value={btn.example}
-                          onChange={(e) =>
-                            updateButton(i, { example: e.target.value })
-                          }
-                          className="bg-muted border-border text-foreground placeholder:text-muted-foreground h-8 text-xs"
+                          onChange={(e) => updateButton(i, { example: e.target.value })}
+                          className="h-8 border-border bg-muted text-foreground text-xs placeholder:text-muted-foreground"
                         />
                       )}
                     </div>
@@ -1053,18 +891,14 @@ export function TemplateManager() {
             </div>
           </div>
 
-          <DialogFooter className="bg-popover border-border">
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              className="border-border text-muted-foreground hover:bg-muted"
-            >
+          <DialogFooter className="border-border bg-popover">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="border-border text-muted-foreground hover:bg-muted">
               {t('cancel')}
             </Button>
             <Button
               onClick={handleSubmit}
               disabled={submitting || form.category === 'Authentication'}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {submitting ? (
                 <>
@@ -1090,7 +924,7 @@ export function TemplateManager() {
           if (!open) setTemplateToDelete(null);
         }}
       >
-        <DialogContent className="bg-popover border-border sm:max-w-sm">
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-popover-foreground">{t('deleteDialogTitle')}</DialogTitle>
             <DialogDescription className="text-muted-foreground">
@@ -1099,7 +933,7 @@ export function TemplateManager() {
                 : t('deleteLocalDesc', { name: templateToDelete?.name || '' })}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="bg-popover border-border">
+          <DialogFooter className="border-border bg-popover">
             <Button
               variant="outline"
               onClick={() => setTemplateToDelete(null)}
@@ -1108,11 +942,7 @@ export function TemplateManager() {
             >
               {t('cancel')}
             </Button>
-            <Button
-              onClick={confirmDelete}
-              disabled={deletingId !== null}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
+            <Button onClick={confirmDelete} disabled={deletingId !== null} className="bg-red-600 text-white hover:bg-red-700">
               {deletingId !== null ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

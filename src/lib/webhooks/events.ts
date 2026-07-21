@@ -18,17 +18,13 @@ export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 /** Human-readable descriptions (surfaced in docs / a future UI). */
 export const WEBHOOK_EVENT_DESCRIPTIONS: Record<WebhookEvent, string> = {
   'message.received': 'An inbound message was received from a contact',
-  'message.status_updated':
-    'A message you sent changed delivery status (sent/delivered/read/failed)',
+  'message.status_updated': 'A message you sent changed delivery status (sent/delivered/read/failed)',
   'conversation.created': 'A new conversation was opened',
 };
 
 /** Type-narrow an unknown value into a valid `WebhookEvent`. */
 export function isWebhookEvent(value: unknown): value is WebhookEvent {
-  return (
-    typeof value === 'string' &&
-    (WEBHOOK_EVENTS as readonly string[]).includes(value)
-  );
+  return typeof value === 'string' && (WEBHOOK_EVENTS as readonly string[]).includes(value);
 }
 
 /**

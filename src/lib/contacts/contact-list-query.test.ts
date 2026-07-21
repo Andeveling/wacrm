@@ -17,10 +17,7 @@ describe('parseContactListQuery', () => {
       })
     ).toEqual({
       search: 'Ada Lovelace',
-      tagIds: [
-        'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-        'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-      ],
+      tagIds: ['aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'],
       page: 3,
       status: 'archived',
     });

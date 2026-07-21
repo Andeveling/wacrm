@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  API_SCOPES,
-  SCOPE_DESCRIPTIONS,
-  hasScope,
-  isApiScope,
-  normalizeScopes,
-} from './scopes';
+import { API_SCOPES, hasScope, isApiScope, normalizeScopes, SCOPE_DESCRIPTIONS } from './scopes';
 
 describe('isApiScope', () => {
   it('accepts every declared scope', () => {
@@ -22,9 +16,7 @@ describe('isApiScope', () => {
 
 describe('normalizeScopes', () => {
   it('passes a valid list through, de-duplicated', () => {
-    expect(
-      normalizeScopes(['messages:send', 'messages:send', 'contacts:read'])
-    ).toEqual(['messages:send', 'contacts:read']);
+    expect(normalizeScopes(['messages:send', 'messages:send', 'contacts:read'])).toEqual(['messages:send', 'contacts:read']);
   });
 
   it('treats an empty array as valid (key with no scopes)', () => {
@@ -43,9 +35,7 @@ describe('normalizeScopes', () => {
 
 describe('hasScope', () => {
   it('is true when the scope is present', () => {
-    expect(hasScope(['messages:send', 'contacts:read'], 'contacts:read')).toBe(
-      true
-    );
+    expect(hasScope(['messages:send', 'contacts:read'], 'contacts:read')).toBe(true);
   });
 
   it('is false when the scope is absent or the list is empty', () => {

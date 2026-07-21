@@ -20,9 +20,7 @@ describe('updateContactLifecycle', () => {
   });
 
   it('validates IDs and authorizes before invoking the transactional operation', async () => {
-    await expect(
-      updateContactLifecycle('archive', ['not-a-uuid'])
-    ).resolves.toEqual({
+    await expect(updateContactLifecycle('archive', ['not-a-uuid'])).resolves.toEqual({
       ok: false,
     });
     expect(requireRole).toHaveBeenCalledWith('agent');
@@ -30,9 +28,7 @@ describe('updateContactLifecycle', () => {
   });
 
   it('archives every requested visible contact through the lifecycle RPC', async () => {
-    await expect(
-      updateContactLifecycle('archive', [contactId])
-    ).resolves.toEqual({ ok: true });
+    await expect(updateContactLifecycle('archive', [contactId])).resolves.toEqual({ ok: true });
     expect(rpc).toHaveBeenCalledWith('archive_contact', {
       p_contact_id: contactId,
     });
@@ -41,9 +37,7 @@ describe('updateContactLifecycle', () => {
   it('does not expose authorization failures to the client', async () => {
     requireRole.mockRejectedValue(new Error('Insufficient role'));
 
-    await expect(
-      updateContactLifecycle('restore', [contactId])
-    ).resolves.toEqual({ ok: false });
+    await expect(updateContactLifecycle('restore', [contactId])).resolves.toEqual({ ok: false });
     expect(rpc).not.toHaveBeenCalled();
   });
 });

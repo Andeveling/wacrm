@@ -15,32 +15,20 @@
 // bug (same lesson as the invite-link flow).
 // ============================================================
 
+import { Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, KeyRound, Loader2, Plus, Trash2 } from 'lucide-react';
-
+import { RequireRole } from '@/components/auth/require-role';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { RequireRole } from '@/components/auth/require-role';
 import { useAuth } from '@/hooks/use-auth';
-import {
-  API_SCOPES,
-  SCOPE_DESCRIPTIONS,
-  type ApiScope,
-} from '@/lib/api-keys/scopes';
-import { useTranslations } from 'next-intl';
+import { API_SCOPES, type ApiScope, SCOPE_DESCRIPTIONS } from '@/lib/api-keys/scopes';
 import { SettingsPanelHead } from './settings-panel-head';
 
 interface ApiKey {
@@ -64,8 +52,7 @@ function fmtDate(iso: string): string {
 
 function keyStatus(k: ApiKey): 'active' | 'revoked' | 'expired' {
   if (k.revoked_at) return 'revoked';
-  if (k.expires_at && new Date(k.expires_at).getTime() <= Date.now())
-    return 'expired';
+  if (k.expires_at && new Date(k.expires_at).getTime() <= Date.now()) return 'expired';
   return 'active';
 }
 
@@ -94,7 +81,7 @@ export function ApiKeysSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void load();
@@ -113,11 +100,7 @@ export function ApiKeysSettings() {
       }
       toast.success(t('revokeSuccess', { name: key.name }));
       // Reflect the revoke locally without a refetch.
-      setKeys((prev) =>
-        prev.map((k) =>
-          k.id === key.id ? { ...k, revoked_at: new Date().toISOString() } : k
-        )
-      );
+      setKeys((prev) => prev.map((k) => (k.id === key.id ? { ...k, revoked_at: new Date().toISOString() } : k)));
     } catch (err) {
       console.error('[ApiKeysSettings] revoke error:', err);
       toast.error(t('networkError'));
@@ -129,21 +112,19 @@ export function ApiKeysSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="text-primary size-6 animate-spin" />
+        <Loader2 className="size-6 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <section className="animate-in fade-in-50 space-y-6 duration-200">
+    <section className="fade-in-50 animate-in space-y-6 duration-200">
       <SettingsPanelHead
         title={t('title')}
-        description={
-          t.rich('description', {
-            apiCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>,
-            headerCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>
-          })
-        }
+        description={t.rich('description', {
+          apiCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>,
+          headerCode: (chunks: React.ReactNode) => <code className="text-xs">{chunks}</code>,
+        })}
         action={
           <RequireRole min="admin">
             <Button onClick={() => setCreateOpen(true)}>
@@ -157,87 +138,63 @@ export function ApiKeysSettings() {
       {keys.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-10 text-center">
-            <KeyRound className="text-muted-foreground size-6" />
-            <p className="text-muted-foreground mt-2 text-sm">
-              {t('noApiKeys')}
-            </p>
+            <KeyRound className="size-6 text-muted-foreground" />
+            <p className="mt-2 text-muted-foreground text-sm">{t('noApiKeys')}</p>
             {canEditSettings ? (
-              <p className="text-muted-foreground mt-1 text-xs">
+              <p className="mt-1 text-muted-foreground text-xs">
                 {t.rich('createOneHint', {
-                  bold: (chunks: React.ReactNode) => (
-                    <span className="text-foreground">{chunks}</span>
-                  ),
+                  bold: (chunks: React.ReactNode) => <span className="text-foreground">{chunks}</span>,
                 })}
               </p>
             ) : (
-              <p className="text-muted-foreground mt-1 text-xs">
-                {t('askAdminHint')}
-              </p>
+              <p className="mt-1 text-muted-foreground text-xs">{t('askAdminHint')}</p>
             )}
           </CardContent>
         </Card>
       ) : (
         <Card>
           <CardContent className="p-0">
-            <ul className="divide-border divide-y">
+            <ul className="divide-y divide-border">
               {keys.map((k) => {
                 const status = keyStatus(k);
                 const inactive = status !== 'active';
                 return (
-                  <li
-                    key={k.id}
-                    className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4"
-                  >
+                  <li key={k.id} className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span
-                          className={`truncate text-sm font-medium ${
-                            inactive
-                              ? 'text-muted-foreground line-through'
-                              : 'text-foreground'
-                          }`}
+                          className={`truncate font-medium text-sm ${inactive ? 'text-muted-foreground line-through' : 'text-foreground'}`}
                         >
                           {k.name}
                         </span>
                         {status === 'revoked' && (
-                          <Badge className="border-border bg-muted text-muted-foreground text-[10px] tracking-wide uppercase">
+                          <Badge className="border-border bg-muted text-[10px] text-muted-foreground uppercase tracking-wide">
                             {t('revoked')}
                           </Badge>
                         )}
                         {status === 'expired' && (
-                          <Badge className="border-border bg-muted text-muted-foreground text-[10px] tracking-wide uppercase">
+                          <Badge className="border-border bg-muted text-[10px] text-muted-foreground uppercase tracking-wide">
                             {t('expired')}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-muted-foreground mt-0.5 font-mono text-xs">
-                        {k.key_prefix}…
-                      </p>
+                      <p className="mt-0.5 font-mono text-muted-foreground text-xs">{k.key_prefix}…</p>
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {k.scopes.length === 0 ? (
-                          <span className="text-muted-foreground text-xs">
-                            {t('noScopes')}
-                          </span>
+                          <span className="text-muted-foreground text-xs">{t('noScopes')}</span>
                         ) : (
                           k.scopes.map((s) => (
-                            <Badge
-                              key={s}
-                              className="border-border bg-muted text-muted-foreground text-[10px]"
-                            >
+                            <Badge key={s} className="border-border bg-muted text-[10px] text-muted-foreground">
                               {s}
                             </Badge>
                           ))
                         )}
                       </div>
-                      <p className="text-muted-foreground mt-1.5 text-xs">
+                      <p className="mt-1.5 text-muted-foreground text-xs">
                         {t('created', { date: fmtDate(k.created_at) })}
                         {' · '}
-                        {k.last_used_at
-                          ? t('lastUsed', { date: fmtDate(k.last_used_at) })
-                          : t('neverUsed')}
-                        {k.expires_at && status !== 'expired'
-                          ? ` · ${t('expires', { date: fmtDate(k.expires_at) })}`
-                          : ''}
+                        {k.last_used_at ? t('lastUsed', { date: fmtDate(k.last_used_at) }) : t('neverUsed')}
+                        {k.expires_at && status !== 'expired' ? ` · ${t('expires', { date: fmtDate(k.expires_at) })}` : ''}
                       </p>
                     </div>
 
@@ -250,11 +207,7 @@ export function ApiKeysSettings() {
                           disabled={revoking === k.id}
                           className="self-start border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200 sm:self-auto"
                         >
-                          {revoking === k.id ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : (
-                            <Trash2 className="size-4" />
-                          )}
+                          {revoking === k.id ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                           {t('revoke')}
                         </Button>
                       </RequireRole>
@@ -267,11 +220,7 @@ export function ApiKeysSettings() {
         </Card>
       )}
 
-      <CreateKeyDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onCreated={load}
-      />
+      <CreateKeyDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={load} />
     </section>
   );
 }
@@ -304,9 +253,7 @@ function CreateKeyDialog({
   }
 
   function toggleScope(scope: ApiScope, checked: boolean) {
-    setScopes((prev) =>
-      checked ? [...prev, scope] : prev.filter((s) => s !== scope)
-    );
+    setScopes((prev) => (checked ? [...prev, scope] : prev.filter((s) => s !== scope)));
   }
 
   async function handleCreate() {
@@ -359,23 +306,14 @@ function CreateKeyDialog({
         {createdKey ? (
           <>
             <DialogHeader>
-              <DialogTitle className="text-popover-foreground">
-                {t('copyTitle')}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                {t('copyDesc')}
-              </DialogDescription>
+              <DialogTitle className="text-popover-foreground">{t('copyTitle')}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">{t('copyDesc')}</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-1.5">
               <Label className="text-muted-foreground">{t('apiKeyLabel')}</Label>
               <div className="flex gap-2">
-                <Input
-                  readOnly
-                  value={createdKey}
-                  className="font-mono text-xs"
-                  onFocus={(e) => e.currentTarget.select()}
-                />
+                <Input readOnly value={createdKey} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} />
                 <Button type="button" variant="outline" onClick={copyKey}>
                   <Copy className="size-4" />
                   {t('copy')}
@@ -397,12 +335,8 @@ function CreateKeyDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-popover-foreground">
-                {t('newKeyTitle')}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                {t('newKeyDesc')}
-              </DialogDescription>
+              <DialogTitle className="text-popover-foreground">{t('newKeyTitle')}</DialogTitle>
+              <DialogDescription className="text-muted-foreground">{t('newKeyDesc')}</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4">
@@ -421,35 +355,24 @@ function CreateKeyDialog({
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground">{t('scopesLabel')}</Label>
-                <div className="border-border space-y-2 rounded-md border p-3">
+                <div className="space-y-2 rounded-md border border-border p-3">
                   {API_SCOPES.map((scope) => (
-                    <label
-                      key={scope}
-                      className="flex cursor-pointer items-start gap-2.5"
-                    >
+                    <label key={scope} className="flex cursor-pointer items-start gap-2.5">
                       <Checkbox
                         checked={scopes.includes(scope)}
-                        onCheckedChange={(checked) =>
-                          toggleScope(scope, checked === true)
-                        }
+                        onCheckedChange={(checked) => toggleScope(scope, checked === true)}
                         className="mt-0.5"
                       />
                       <span className="min-w-0">
-                        <span className="text-foreground block font-mono text-xs">
-                          {scope}
-                        </span>
-                        <span className="text-muted-foreground block text-xs">
-                          {SCOPE_DESCRIPTIONS[scope]}
-                        </span>
+                        <span className="block font-mono text-foreground text-xs">{scope}</span>
+                        <span className="block text-muted-foreground text-xs">{SCOPE_DESCRIPTIONS[scope]}</span>
                       </span>
                     </label>
                   ))}
                 </div>
                 <p className="text-muted-foreground text-xs">
                   {t.rich('scopesHint', {
-                    code: (chunks: React.ReactNode) => (
-                      <code className="text-[11px]">{chunks}</code>
-                    ),
+                    code: (chunks: React.ReactNode) => <code className="text-[11px]">{chunks}</code>,
                   })}
                 </p>
               </div>

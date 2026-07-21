@@ -1,9 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-  handleTemplateWebhookChange,
-  isTemplateWebhookField,
-} from './template-webhook';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { handleTemplateWebhookChange, isTemplateWebhookField } from './template-webhook';
 
 // Tiny mock that records the .update payload and the .eq filter for
 // inspection. Mirrors the surface this module actually uses on the
@@ -13,7 +10,7 @@ function makeSupabaseStub(
   selectResult: { data: { id: string }[] | null; error: { message: string } | null } = {
     data: [{ id: 'row-1' }],
     error: null,
-  },
+  }
 ) {
   const calls: {
     table: string;
@@ -35,15 +32,10 @@ function makeSupabaseStub(
                 select() {
                   return Promise.resolve(selectResult);
                 },
-                then(
-                  onFulfilled: (
-                    v: { error: { message: string } | null },
-                  ) => unknown,
-                ) {
+                // biome-ignore lint/suspicious/noThenProperty: Supabase's real client is thenable; tests await this builder directly
+                then(onFulfilled: (v: { error: { message: string } | null }) => unknown) {
                   // Allow `await supabase.update().eq()` (no .select()).
-                  return Promise.resolve({ error: selectResult.error }).then(
-                    onFulfilled,
-                  );
+                  return Promise.resolve({ error: selectResult.error }).then(onFulfilled);
                 },
               };
             },
@@ -60,9 +52,7 @@ describe('isTemplateWebhookField', () => {
   it('recognises the three template fields', () => {
     expect(isTemplateWebhookField('message_template_status_update')).toBe(true);
     expect(isTemplateWebhookField('message_template_quality_update')).toBe(true);
-    expect(isTemplateWebhookField('message_template_components_update')).toBe(
-      true,
-    );
+    expect(isTemplateWebhookField('message_template_components_update')).toBe(true);
   });
   it('rejects messaging fields', () => {
     expect(isTemplateWebhookField('messages')).toBe(false);
@@ -92,7 +82,7 @@ describe('handleTemplateWebhookChange — status update', () => {
           message_template_language: 'en_US',
         },
       },
-      stub,
+      stub
     );
     expect(supabaseCalls).toHaveLength(1);
     expect(supabaseCalls[0].table).toBe('message_templates');
@@ -118,12 +108,10 @@ describe('handleTemplateWebhookChange — status update', () => {
           reason: 'Template uses non-compliant language.',
         },
       },
-      stub,
+      stub
     );
     expect(calls[0].update?.status).toBe('REJECTED');
-    expect(calls[0].update?.rejection_reason).toBe(
-      'Template uses non-compliant language.',
-    );
+    expect(calls[0].update?.rejection_reason).toBe('Template uses non-compliant language.');
   });
 
   it('falls back to a generic reason when REJECTED has no `reason`', async () => {
@@ -133,7 +121,7 @@ describe('handleTemplateWebhookChange — status update', () => {
         field: 'message_template_status_update',
         value: { event: 'REJECTED', message_template_id: '7' },
       },
-      stub,
+      stub
     );
     expect(calls[0].update?.rejection_reason).toBe('Rejected by Meta');
   });
@@ -145,7 +133,7 @@ describe('handleTemplateWebhookChange — status update', () => {
         field: 'message_template_status_update',
         value: { event: 'PENDING_REVIEW', message_template_id: '1' },
       },
-      stub,
+      stub
     );
     expect(calls[0].update?.status).toBe('PENDING');
   });
@@ -157,7 +145,7 @@ describe('handleTemplateWebhookChange — status update', () => {
         field: 'message_template_status_update',
         value: { event: 'APPROVED' },
       },
-      stub,
+      stub
     );
     expect(calls).toHaveLength(0);
   });
@@ -174,7 +162,7 @@ describe('handleTemplateWebhookChange — status update', () => {
           message_template_name: 'mystery',
         },
       },
-      stub,
+      stub
     );
     expect(warn).toHaveBeenCalled();
   });
@@ -192,7 +180,7 @@ describe('handleTemplateWebhookChange — quality update', () => {
           new_quality_score: 'YELLOW',
         },
       },
-      stub,
+      stub
     );
     expect(calls[0].update).toEqual({ quality_score: 'YELLOW' });
     expect(calls[0].filter).toEqual({
@@ -211,7 +199,7 @@ describe('handleTemplateWebhookChange — quality update', () => {
           new_quality_score: 'PURPLE', // not a real Meta value
         },
       },
-      stub,
+      stub
     );
     expect(calls[0].update).toEqual({ quality_score: null });
   });
@@ -229,7 +217,7 @@ describe('handleTemplateWebhookChange — components update', () => {
           message_template_name: 'x',
         },
       },
-      stub,
+      stub
     );
     expect(calls).toHaveLength(0);
     expect(info).toHaveBeenCalled();
@@ -243,9 +231,8 @@ describe('handleTemplateWebhookChange — unknown field', () => {
       // Pretend Meta added a new template_* field we don't know about.
       // The route handler pre-filters via isTemplateWebhookField, but
       // the dispatch should still be safe if the filter is bypassed.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { field: 'message_template_future_field' as any, value: {} },
-      stub,
+      { field: 'message_template_future_field' as unknown as Parameters<typeof handleTemplateWebhookChange>[0]['field'], value: {} },
+      stub
     );
     expect(calls).toHaveLength(0);
   });

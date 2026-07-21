@@ -7,19 +7,12 @@
 // secret is never returned here — it's shown once at creation only.
 // ============================================================
 
+import { fail, ok, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { requireApiKey } from '@/lib/auth/api-context';
-import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
+import { normalizeWebhookUrl, serializeWebhookEndpoint, WEBHOOK_PUBLIC_COLUMNS } from '@/lib/webhooks/endpoints';
 import { normalizeEvents } from '@/lib/webhooks/events';
-import {
-  WEBHOOK_PUBLIC_COLUMNS,
-  serializeWebhookEndpoint,
-  normalizeWebhookUrl,
-} from '@/lib/webhooks/endpoints';
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireApiKey(request, 'webhooks:manage');
     const { id } = await params;
@@ -43,18 +36,12 @@ export async function GET(
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireApiKey(request, 'webhooks:manage');
     const { id } = await params;
 
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') {
       return fail('bad_request', 'Request body must be a JSON object', 400);
     }
@@ -72,11 +59,7 @@ export async function PATCH(
     if ('events' in body) {
       const events = normalizeEvents(body.events);
       if (!events) {
-        return fail(
-          'bad_request',
-          "'events' must be a non-empty array of known event names",
-          400
-        );
+        return fail('bad_request', "'events' must be a non-empty array of known event names", 400);
       }
       updates.events = events;
     }
@@ -117,10 +100,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await requireApiKey(request, 'webhooks:manage');
     const { id } = await params;

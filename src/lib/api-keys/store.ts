@@ -31,9 +31,7 @@ export interface ApiKeyRow {
  * client (RLS-bypassing); the hash is the only credential, so this
  * is the moment that establishes the caller's account.
  */
-export async function findActiveKeyByHash(
-  hash: string
-): Promise<ApiKeyRow | null> {
+export async function findActiveKeyByHash(hash: string): Promise<ApiKeyRow | null> {
   const { data, error } = await supabaseAdmin()
     .from('api_keys')
     .select('id, account_id, created_by, name, scopes, expires_at, revoked_at')
@@ -61,14 +59,8 @@ export async function findActiveKeyByHash(
  * future endpoint can echo it without a second round trip in the
  * route. Service-role; the key already proved account membership.
  */
-export async function getAccountName(
-  accountId: string
-): Promise<string | null> {
-  const { data, error } = await supabaseAdmin()
-    .from('accounts')
-    .select('name')
-    .eq('id', accountId)
-    .maybeSingle();
+export async function getAccountName(accountId: string): Promise<string | null> {
+  const { data, error } = await supabaseAdmin().from('accounts').select('name').eq('id', accountId).maybeSingle();
   if (error || !data) return null;
   return (data.name as string) ?? null;
 }
@@ -85,10 +77,7 @@ export function touchLastUsed(id: string): void {
     .eq('id', id)
     .then(({ error }) => {
       if (error) {
-        console.warn(
-          '[api-keys/store] last_used_at bump failed:',
-          error.message
-        );
+        console.warn('[api-keys/store] last_used_at bump failed:', error.message);
       }
     });
 }

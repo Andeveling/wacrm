@@ -59,25 +59,15 @@ describe('loadMetrics', () => {
 
     await loadMetrics(db);
 
-    const conversations = calls.filter(
-      (call) => call.table === 'conversations'
-    );
+    const conversations = calls.filter((call) => call.table === 'conversations');
     expect(conversations).toHaveLength(3);
     for (const query of conversations) {
       expect(query.select).toContain('contacts!inner');
-      expect(query.filters).toContainEqual([
-        'is',
-        'contacts.archived_at',
-        null,
-      ]);
+      expect(query.filters).toContainEqual(['is', 'contacts.archived_at', null]);
     }
 
     const contacts = calls.filter((call) => call.table === 'contacts');
     expect(contacts).toHaveLength(2);
-    expect(contacts.flatMap((query) => query.filters)).not.toContainEqual([
-      'is',
-      'archived_at',
-      null,
-    ]);
+    expect(contacts.flatMap((query) => query.filters)).not.toContainEqual(['is', 'archived_at', null]);
   });
 });

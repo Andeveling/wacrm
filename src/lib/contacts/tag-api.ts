@@ -4,11 +4,7 @@ interface ContactTagMutationResult {
   reason?: 'duplicate' | 'max_depth';
 }
 
-async function mutateContactTag(
-  contactId: string,
-  tagId: string,
-  method: 'POST' | 'DELETE'
-): Promise<ContactTagMutationResult> {
+async function mutateContactTag(contactId: string, tagId: string, method: 'POST' | 'DELETE'): Promise<ContactTagMutationResult> {
   const response = await fetch(`/api/contacts/${contactId}/tags`, {
     method,
     headers: { 'Content-Type': 'application/json' },

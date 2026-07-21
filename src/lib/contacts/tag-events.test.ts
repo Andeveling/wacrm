@@ -13,11 +13,7 @@ vi.mock('@/lib/automations/engine', () => ({
   runAutomationsForTrigger: mocks.dispatch,
 }));
 
-import {
-  addContactTagAndDispatch,
-  getTagChainDepth,
-  MAX_TAG_CHAIN_DEPTH,
-} from './tag-events';
+import { addContactTagAndDispatch, getTagChainDepth, MAX_TAG_CHAIN_DEPTH } from './tag-events';
 
 const base = {
   db: {} as never,

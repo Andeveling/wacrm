@@ -1,12 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import {
-  createBroadcast,
-  BroadcastError,
-  completeBroadcastRecipient,
-  deliverBroadcast,
-  type BroadcastPlan,
-} from './broadcast-core';
+import { describe, expect, it, vi } from 'vitest';
+import { BroadcastError, type BroadcastPlan, completeBroadcastRecipient, createBroadcast, deliverBroadcast } from './broadcast-core';
 
 const { sendTemplateMessage } = vi.hoisted(() => ({
   sendTemplateMessage: vi.fn(),
@@ -41,9 +35,7 @@ describe('createBroadcast validation', () => {
     const recipients = Array.from({ length: 1001 }, () => ({
       to: '+14155550123',
     }));
-    await expect(
-      createBroadcast(db, 'acc', 'user', { templateName: 'promo', recipients })
-    ).rejects.toMatchObject({ status: 400 });
+    await expect(createBroadcast(db, 'acc', 'user', { templateName: 'promo', recipients })).rejects.toMatchObject({ status: 400 });
   });
 });
 
@@ -62,9 +54,7 @@ describe('deliverBroadcast lifecycle safety', () => {
     broadcastQuery.update.mockReturnValue(broadcastQuery);
     broadcastQuery.eq.mockReturnValue(broadcastQuery);
     const db = {
-      from: vi.fn((table: string) =>
-        table === 'broadcast_recipients' ? recipientQuery : broadcastQuery
-      ),
+      from: vi.fn((table: string) => (table === 'broadcast_recipients' ? recipientQuery : broadcastQuery)),
     } as unknown as SupabaseClient;
     const plan: BroadcastPlan = {
       broadcastId: 'broadcast',

@@ -1,10 +1,4 @@
-import {
-  Crown,
-  Shield,
-  UserCog,
-  UserIcon,
-  type LucideIcon,
-} from 'lucide-react';
+import { Crown, type LucideIcon, Shield, UserCog, UserIcon } from 'lucide-react';
 
 import type { AccountRole } from '@/lib/auth/roles';
 import type { ChipVariant } from './settings-chip';
@@ -18,10 +12,7 @@ import type { ChipVariant } from './settings-chip';
  * `variant` drives the token-based <SettingsChip>; `className` is the
  * inline Tailwind string the Members tab applies to its own spans.
  */
-export const ROLE_META: Record<
-  AccountRole,
-  { icon: LucideIcon; label: string; variant: ChipVariant; className: string }
-> = {
+export const ROLE_META: Record<AccountRole, { icon: LucideIcon; label: string; variant: ChipVariant; className: string }> = {
   owner: {
     icon: Crown,
     label: 'owner',

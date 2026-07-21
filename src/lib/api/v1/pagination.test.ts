@@ -1,13 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import {
-  parseListParams,
-  encodeCursor,
-  decodeCursor,
-  keysetFilter,
-  buildPage,
-  DEFAULT_LIMIT,
-  MAX_LIMIT,
-} from './pagination';
+import { describe, expect, it } from 'vitest';
+import { buildPage, DEFAULT_LIMIT, decodeCursor, encodeCursor, keysetFilter, MAX_LIMIT, parseListParams } from './pagination';
 
 const req = (qs: string) => new Request(`https://x.test/api/v1/contacts${qs}`);
 
@@ -64,18 +56,12 @@ describe('encode/decodeCursor round-trip', () => {
   it('rejects a crafted cursor whose id is not a UUID (filter-injection guard)', () => {
     // A hand-built cursor trying to smuggle PostgREST filter syntax
     // through keysetFilter must be refused, not decoded.
-    const evil = Buffer.from(
-      '2026-01-01T00:00:00Z|x),or(account_id.neq.0',
-      'utf8'
-    ).toString('base64url');
+    const evil = Buffer.from('2026-01-01T00:00:00Z|x),or(account_id.neq.0', 'utf8').toString('base64url');
     expect(decodeCursor(evil)).toBeNull();
   });
 
   it('rejects a cursor whose timestamp is not parseable', () => {
-    const bad = Buffer.from(
-      'not-a-date|11111111-1111-4111-8111-111111111111',
-      'utf8'
-    ).toString('base64url');
+    const bad = Buffer.from('not-a-date|11111111-1111-4111-8111-111111111111', 'utf8').toString('base64url');
     expect(decodeCursor(bad)).toBeNull();
   });
 });

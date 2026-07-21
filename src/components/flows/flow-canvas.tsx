@@ -36,56 +36,31 @@
  * list view reads.
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   applyNodeChanges,
   Background,
   BackgroundVariant,
+  type Connection,
   Controls,
   Handle,
   MiniMap,
+  type NodeChange,
+  type NodeProps,
+  type OnNodeDrag,
   Panel,
   Position,
   ReactFlow,
   ReactFlowProvider,
-  useReactFlow,
-  type Connection,
-  type Node as RfNode,
   type Edge as RfEdge,
-  type NodeChange,
-  type NodeProps,
-  type OnNodeDrag,
+  type Node as RfNode,
+  useReactFlow,
 } from '@xyflow/react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import '@xyflow/react/dist/style.css';
 import { Plus, Trash2 } from 'lucide-react';
 
 import { useTranslations } from 'next-intl';
-
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
-import {
-  applyEdgeConnection,
-  deriveCanvasEdges,
-  outgoingSlots,
-} from '@/lib/flows/edges';
-import { autoLayout, shouldAutoLayout } from '@/lib/flows/layout';
-import {
-  NODE_META,
-  NodeIconChip,
-  groupNodeTypesByCategory,
-  nodeColors,
-  summarizeNode,
-  type BuilderNode,
-  type NodeType,
-} from './shared';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -95,8 +70,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { applyEdgeConnection, deriveCanvasEdges, outgoingSlots } from '@/lib/flows/edges';
+import { autoLayout, shouldAutoLayout } from '@/lib/flows/layout';
+import { cn } from '@/lib/utils';
 import { useFlowEditor } from './flow-editor-state';
 import { NodeConfigForm } from './forms/node-config-form';
+import { type BuilderNode, groupNodeTypesByCategory, NODE_META, NodeIconChip, type NodeType, nodeColors, summarizeNode } from './shared';
 
 // React-Flow node `data` payload — the bits our custom renderer needs.
 interface NodeData extends Record<string, unknown> {
@@ -136,7 +116,7 @@ function slotColor(nodeType: NodeType, slotId: string, fallback: string) {
 function FlowNodeCard({ data, selected }: NodeProps) {
   const t = useTranslations('Flows.builder');
   const { node, isEntry, isFlashed } = data as NodeData;
-  const meta = NODE_META[node.node_type];
+  const _meta = NODE_META[node.node_type];
   const c = nodeColors(node.node_type);
   const tSummary = useTranslations('Flows.summary');
   const summary = summarizeNode(node, tSummary);
@@ -160,64 +140,40 @@ function FlowNodeCard({ data, selected }: NodeProps) {
           '--nc-ring': c.ring,
           '--nc-text': c.text,
           borderColor: selected ? c.solid : undefined,
-          boxShadow: selected
-            ? `0 0 0 1px ${c.solid}, 0 14px 36px -12px ${c.ring}`
-            : undefined,
+          boxShadow: selected ? `0 0 0 1px ${c.solid}, 0 14px 36px -12px ${c.ring}` : undefined,
         } as React.CSSProperties
       }
       className={cn(
-        'bg-card relative max-w-[260px] min-w-[220px] rounded-xl border px-3.5 py-3 text-left shadow-[0_2px_6px_rgba(0,0,0,0.18)] transition-[box-shadow,border-color]',
-        selected
-          ? 'border-[var(--nc)]'
-          : 'border-border hover:border-[var(--nc-ring)]',
+        'relative min-w-[220px] max-w-[260px] rounded-xl border bg-card px-3.5 py-3 text-left shadow-[0_2px_6px_rgba(0,0,0,0.18)] transition-[box-shadow,border-color]',
+        selected ? 'border-[var(--nc)]' : 'border-border hover:border-[var(--nc-ring)]',
         // Flash overrides hover/selected colors briefly. Tailwind's
         // built-in `animate-pulse` is too gentle; a ring with the
         // amber accent matches the list view's flash semantics.
         isFlashed && '!border-amber-400 ring-2 ring-amber-400/60'
       )}
     >
-      {hasTarget && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          className="!bg-card !h-2.5 !w-2.5 !border-2 !border-[var(--nc-ring)]"
-        />
-      )}
+      {hasTarget && <Handle type="target" position={Position.Left} className="!bg-card !h-2.5 !w-2.5 !border-2 !border-[var(--nc-ring)]" />}
 
       <div className="flex items-center gap-2">
-        <NodeIconChip
-          type={node.node_type}
-          size={24}
-          iconSize={14}
-          className="rounded-md"
-        />
-        <span
-          className="truncate text-[10.5px] font-semibold tracking-wider uppercase"
-          style={{ color: c.text }}
-        >
+        <NodeIconChip type={node.node_type} size={24} iconSize={14} className="rounded-md" />
+        <span className="truncate font-semibold text-[10.5px] uppercase tracking-wider" style={{ color: c.text }}>
           {t(`nodes.${node.node_type}.label`)}
         </span>
         {isEntry && (
-          <span className="border-border text-muted-foreground ml-auto rounded border px-1.5 py-0.5 text-[8.5px] font-bold tracking-[0.1em] uppercase">
+          <span className="ml-auto rounded border border-border px-1.5 py-0.5 font-bold text-[8.5px] text-muted-foreground uppercase tracking-[0.1em]">
             {t('badgeEntry')}
           </span>
         )}
       </div>
-      <div className="text-muted-foreground mt-2 truncate font-mono text-[11px]">
-        {node.node_key}
-      </div>
-      {summary && (
-        <div className="text-muted-foreground mt-1 line-clamp-2 text-xs leading-relaxed">
-          {summary}
-        </div>
-      )}
+      <div className="mt-2 truncate font-mono text-[11px] text-muted-foreground">{node.node_key}</div>
+      {summary && <div className="mt-1 line-clamp-2 text-muted-foreground text-xs leading-relaxed">{summary}</div>}
 
       {isMultiSlot && (
-        <div className="border-border mt-2.5 flex flex-col gap-1 border-t pt-2.5">
+        <div className="mt-2.5 flex flex-col gap-1 border-border border-t pt-2.5">
           {slots.map((slot) => (
             <div
               key={slot.id}
-              className="text-muted-foreground relative flex items-center justify-between gap-2 rounded px-1 py-0.5 text-[11px]"
+              className="relative flex items-center justify-between gap-2 rounded px-1 py-0.5 text-[11px] text-muted-foreground"
             >
               <span className="truncate" title={slot.label}>
                 {slot.label}
@@ -275,15 +231,7 @@ export function FlowCanvas() {
 
 function FlowCanvasInner() {
   const t = useTranslations('Flows.builder');
-  const {
-    state,
-    setState,
-    updateNodeConfig,
-    updateNodePosition,
-    updateNodePositions,
-    removeNode,
-    flashKey,
-  } = useFlowEditor();
+  const { state, setState, updateNodeConfig, updateNodePosition, updateNodePositions, removeNode, flashKey } = useFlowEditor();
   const reactFlow = useReactFlow();
   const builderNodes = state.nodes;
   const entryNodeId = state.entry_node_id;
@@ -293,10 +241,7 @@ function FlowCanvasInner() {
   // flow-builder.tsx.
   const [selectedNodeKey, setSelectedNodeKey] = useState<string | null>(null);
   const selectedNode = useMemo(
-    () =>
-      selectedNodeKey
-        ? (builderNodes.find((n) => n.node_key === selectedNodeKey) ?? null)
-        : null,
+    () => (selectedNodeKey ? (builderNodes.find((n) => n.node_key === selectedNodeKey) ?? null) : null),
     [selectedNodeKey, builderNodes]
   );
 
@@ -324,11 +269,7 @@ function FlowCanvasInner() {
   useEffect(() => {
     if (!autoLayoutPositions || persistedAutoLayoutRef.current) return;
     persistedAutoLayoutRef.current = true;
-    updateNodePositions(
-      Object.fromEntries(
-        [...autoLayoutPositions].map(([key, pos]) => [key, pos])
-      )
-    );
+    updateNodePositions(Object.fromEntries([...autoLayoutPositions].map(([key, pos]) => [key, pos])));
   }, [autoLayoutPositions, updateNodePositions]);
 
   const derivedRfNodes = useMemo(() => {
@@ -381,12 +322,9 @@ function FlowCanvasInner() {
     return rfEdges;
   }, [builderNodes]);
 
-  const handleNodesChange = useCallback(
-    (changes: NodeChange<RfNode<NodeData>>[]) => {
-      setRfNodes((nodes) => applyNodeChanges(changes, nodes));
-    },
-    []
-  );
+  const handleNodesChange = useCallback((changes: NodeChange<RfNode<NodeData>>[]) => {
+    setRfNodes((nodes) => applyNodeChanges(changes, nodes));
+  }, []);
 
   // Drag-to-position: React-Flow tracks the visual drag internally and
   // fires this once on release. We write the final coordinate back to
@@ -417,12 +355,9 @@ function FlowCanvasInner() {
     });
   }, [flashKey, builderNodes, reactFlow]);
 
-  const handleNodeClick = useCallback(
-    (_event: React.MouseEvent, node: RfNode<NodeData>) => {
-      setSelectedNodeKey(node.id);
-    },
-    []
-  );
+  const handleNodeClick = useCallback((_event: React.MouseEvent, node: RfNode<NodeData>) => {
+    setSelectedNodeKey(node.id);
+  }, []);
 
   // Drag-to-connect: React-Flow fires onConnect when the user drops a
   // handle drag onto a target handle. We look up the source node,
@@ -432,26 +367,16 @@ function FlowCanvasInner() {
   // the next render — no need to maintain a separate edge list.
   const handleConnect = useCallback(
     (connection: Connection) => {
-      if (
-        !connection.source ||
-        !connection.target ||
-        !connection.sourceHandle
-      ) {
+      if (!connection.source || !connection.target || !connection.sourceHandle) {
         return;
       }
-      const sourceNode = builderNodes.find(
-        (n) => n.node_key === connection.source
-      );
+      const sourceNode = builderNodes.find((n) => n.node_key === connection.source);
       if (!sourceNode) return;
       // Self-loops are a footgun (a button whose target is its own
       // node = infinite reprompt). Reject silently — the user can
       // still wire one via the per-node dropdown if they really want.
       if (connection.source === connection.target) return;
-      const patch = applyEdgeConnection(
-        sourceNode,
-        connection.sourceHandle,
-        connection.target
-      );
+      const patch = applyEdgeConnection(sourceNode, connection.sourceHandle, connection.target);
       if (patch) updateNodeConfig(connection.source, patch);
     },
     [builderNodes, updateNodeConfig]
@@ -512,7 +437,7 @@ function FlowCanvasInner() {
 
   if (rfNodes.length === 0) {
     return (
-      <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-3 text-sm">
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground text-sm">
         <p>{t('noNodesYet')}</p>
         <CanvasAddNodeButton t={t} />
       </div>
@@ -548,12 +473,7 @@ function FlowCanvasInner() {
           maxZoom={1.5}
         >
           {/* Dot grid, matching the design's faint canvas backdrop. */}
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={22}
-            size={1.4}
-            color="var(--border)"
-          />
+          <Background variant={BackgroundVariant.Dots} gap={22} size={1.4} color="var(--border)" />
           <Controls
             className="!border-border !bg-card [&_button]:!border-border [&_button]:!bg-card [&_button:hover]:!bg-muted [&_button_svg]:!fill-foreground !overflow-hidden !rounded-xl !border !shadow-[0_6px_20px_-8px_rgba(0,0,0,0.5)]"
             showInteractive={false}
@@ -561,9 +481,7 @@ function FlowCanvasInner() {
           <MiniMap
             pannable
             zoomable
-            nodeColor={(n) =>
-              nodeColors((n.data as NodeData).node.node_type).solid
-            }
+            nodeColor={(n) => nodeColors((n.data as NodeData).node.node_type).solid}
             nodeStrokeWidth={0}
             nodeBorderRadius={3}
             maskColor="color-mix(in oklch, var(--background) 70%, transparent)"
@@ -624,41 +542,29 @@ function NodeEditSheet({
       </Sheet>
     );
   }
-  const meta = NODE_META[node.node_type];
+  const _meta = NODE_META[node.node_type];
   const c = nodeColors(node.node_type);
   return (
     <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-      <SheetContent
-        side="right"
-        className="border-border bg-popover flex w-full flex-col gap-0 border-l p-0 sm:max-w-md"
-      >
-        <SheetHeader className="border-border flex-row items-center gap-3 space-y-0 border-b px-5 py-4">
+      <SheetContent side="right" className="flex w-full flex-col gap-0 border-border border-l bg-popover p-0 sm:max-w-md">
+        <SheetHeader className="flex-row items-center gap-3 space-y-0 border-border border-b px-5 py-4">
           <NodeIconChip type={node.node_type} size={36} iconSize={18} />
           <div className="min-w-0 flex-1">
-            <SheetTitle className="flex items-center gap-2 text-[11px] font-semibold tracking-wider uppercase">
+            <SheetTitle className="flex items-center gap-2 font-semibold text-[11px] uppercase tracking-wider">
               <span style={{ color: c.text }}>{t(`nodes.${node.node_type}.label`)}</span>
               {isEntry && (
-                <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold tracking-wider text-emerald-300 uppercase">
+                <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 font-semibold text-[9px] text-emerald-300 uppercase tracking-wider">
                   {t('badgeEntry')}
                 </span>
               )}
             </SheetTitle>
-            <SheetDescription className="text-muted-foreground mt-0.5 text-xs">
-              {t(`nodes.${node.node_type}.blurb`)}
-            </SheetDescription>
+            <SheetDescription className="mt-0.5 text-muted-foreground text-xs">{t(`nodes.${node.node_type}.blurb`)}</SheetDescription>
           </div>
-          <code className="bg-muted text-muted-foreground shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px]">
-            {node.node_key}
-          </code>
+          <code className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">{node.node_key}</code>
         </SheetHeader>
 
         <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
-          <NodeConfigForm
-            node={node}
-            allNodes={allNodes}
-            showAdvanced={false}
-            onUpdateConfig={onUpdateConfig}
-          />
+          <NodeConfigForm node={node} allNodes={allNodes} showAdvanced={false} onUpdateConfig={onUpdateConfig} />
         </div>
 
         <SheetFooter className="border-border border-t px-5 py-3 sm:flex-row sm:justify-between">
@@ -669,12 +575,7 @@ function NodeEditSheet({
           ) : (
             <span />
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onDelete}
-            className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-          >
+          <Button variant="ghost" size="sm" onClick={onDelete} className="text-red-400 hover:bg-red-500/10 hover:text-red-300">
             <Trash2 className="h-3.5 w-3.5" />
             {t('deleteNode')}
           </Button>
@@ -725,26 +626,19 @@ function CanvasAddNodeButton({ t }: { t: ReturnType<typeof useTranslations> }) {
     // NODE_WIDTH / NODE_HEIGHT are the dagre layout defaults; offset
     // so the card sits visually centered rather than top-left at the
     // viewport center.
-    updateNodePosition(
-      key,
-      center.x - NODE_WIDTH / 2,
-      center.y - NODE_HEIGHT / 2
-    );
+    updateNodePosition(key, center.x - NODE_WIDTH / 2, center.y - NODE_HEIGHT / 2);
   };
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="bg-primary text-primary-foreground hover:bg-primary-hover inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-medium shadow-[0_6px_20px_-8px_rgba(0,0,0,0.5)] transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3.5 py-2 font-medium text-[13px] text-primary-foreground shadow-[0_6px_20px_-8px_rgba(0,0,0,0.5)] transition-colors hover:bg-primary-hover"
         aria-label={t('addNode')}
       >
         <Plus className="h-4 w-4" />
         {t('addNode')}
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="start"
-        className="border-border bg-popover w-[268px] p-1.5"
-      >
+      <DropdownMenuContent align="start" className="w-[268px] border-border bg-popover p-1.5">
         {groupNodeTypesByCategory(ADD_NODE_TYPES).map((group, i) => (
           // DropdownMenuGroup (base-ui Menu.Group) is REQUIRED: the
           // DropdownMenuLabel below is base-ui's Menu.GroupLabel, which
@@ -753,30 +647,17 @@ function CanvasAddNodeButton({ t }: { t: ReturnType<typeof useTranslations> }) {
           <Fragment key={group.id}>
             {i > 0 && <DropdownMenuSeparator />}
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-muted-foreground px-2 py-1.5 text-[11px] font-semibold tracking-wider uppercase">
+              <DropdownMenuLabel className="px-2 py-1.5 font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
                 {t(`categories.${group.id}`)}
               </DropdownMenuLabel>
               {group.types.map((t_type) => {
-                const meta = NODE_META[t_type];
+                const _meta = NODE_META[t_type];
                 return (
-                  <DropdownMenuItem
-                    key={t_type}
-                    onClick={() => handleAdd(t_type)}
-                    className="gap-3 py-2"
-                  >
-                    <NodeIconChip
-                      type={t_type}
-                      size={28}
-                      iconSize={16}
-                      className="rounded-md"
-                    />
+                  <DropdownMenuItem key={t_type} onClick={() => handleAdd(t_type)} className="gap-3 py-2">
+                    <NodeIconChip type={t_type} size={28} iconSize={16} className="rounded-md" />
                     <span className="flex flex-col">
-                      <span className="text-popover-foreground text-[13px] font-semibold">
-                        {t(`nodes.${t_type}.label`)}
-                      </span>
-                      <span className="text-muted-foreground text-[11.5px]">
-                        {t(`nodes.${t_type}.blurb`)}
-                      </span>
+                      <span className="font-semibold text-[13px] text-popover-foreground">{t(`nodes.${t_type}.label`)}</span>
+                      <span className="text-[11.5px] text-muted-foreground">{t(`nodes.${t_type}.blurb`)}</span>
                     </span>
                   </DropdownMenuItem>
                 );

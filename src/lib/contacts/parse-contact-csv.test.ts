@@ -7,11 +7,7 @@ describe('parseTagCell', () => {
   });
 
   it('splits semicolon-separated tags', () => {
-    expect(parseTagCell('VIP; Lead; Customer')).toEqual([
-      'VIP',
-      'Lead',
-      'Customer',
-    ]);
+    expect(parseTagCell('VIP; Lead; Customer')).toEqual(['VIP', 'Lead', 'Customer']);
   });
 
   it('de-dupes case-insensitively', () => {

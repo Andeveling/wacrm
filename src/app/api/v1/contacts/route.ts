@@ -17,11 +17,7 @@ import {
   serializeContact,
   setContactTags,
 } from '@/lib/api/v1/contacts';
-import {
-  buildPage,
-  keysetFilter,
-  parseListParams,
-} from '@/lib/api/v1/pagination';
+import { buildPage, keysetFilter, parseListParams } from '@/lib/api/v1/pagination';
 import { fail, ok, okList, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { requireApiKey } from '@/lib/auth/api-context';
 
@@ -47,18 +43,11 @@ export async function GET(request: Request) {
     // contact's FULL tag set for serialization. This filters in one
     // bounded query (paged by limit+1) instead of pre-fetching an
     // unbounded id list into an `.in(...)`.
-    const selectClause = tag
-      ? `${CONTACT_SELECT}, tag_filter:contact_tags!inner(tag_id)`
-      : CONTACT_SELECT;
+    const selectClause = tag ? `${CONTACT_SELECT}, tag_filter:contact_tags!inner(tag_id)` : CONTACT_SELECT;
 
-    let query = ctx.supabase
-      .from('contacts')
-       .select(selectClause)
-       .eq('account_id', ctx.accountId);
+    let query = ctx.supabase.from('contacts').select(selectClause).eq('account_id', ctx.accountId);
 
-    query = status === 'archived'
-      ? query.not('archived_at', 'is', null)
-      : query.is('archived_at', null);
+    query = status === 'archived' ? query.not('archived_at', 'is', null) : query.is('archived_at', null);
 
     if (search) {
       query = query.or(`name.ilike.*${search}*,phone.ilike.*${search}*`);
@@ -85,10 +74,7 @@ export async function GET(request: Request) {
     // Cast via unknown: the conditional `selectClause` (with the
     // tag_filter alias) is a runtime string, so supabase-js can't infer
     // a row type from it.
-    const { items, nextCursor } = buildPage(
-      (data ?? []) as unknown as Array<{ created_at: string; id: string }>,
-      limit
-    );
+    const { items, nextCursor } = buildPage((data ?? []) as unknown as Array<{ created_at: string; id: string }>, limit);
     return okList(
       items.map((r) => serializeContact(r as Record<string, unknown>)),
       nextCursor
@@ -102,10 +88,7 @@ export async function POST(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'contacts:write');
 
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') {
       return fail('bad_request', 'Request body must be a JSON object', 400);
     }
@@ -117,17 +100,12 @@ export async function POST(request: Request) {
 
     const auditUserId = await resolveAuditUserId(ctx.supabase, ctx.accountId);
 
-    const { id, created, status } = await findOrCreateContact(
-      ctx.supabase,
-      ctx.accountId,
-      auditUserId,
-      {
-        phone,
-        name: typeof body.name === 'string' ? body.name : undefined,
-        email: typeof body.email === 'string' ? body.email : undefined,
-        company: typeof body.company === 'string' ? body.company : undefined,
-      }
-    );
+    const { id, created, status } = await findOrCreateContact(ctx.supabase, ctx.accountId, auditUserId, {
+      phone,
+      name: typeof body.name === 'string' ? body.name : undefined,
+      email: typeof body.email === 'string' ? body.email : undefined,
+      company: typeof body.company === 'string' ? body.company : undefined,
+    });
 
     if (Array.isArray(body.tags)) {
       await setContactTags(
@@ -144,11 +122,7 @@ export async function POST(request: Request) {
     return ok(contact, created ? 201 : 200);
   } catch (err) {
     if (err instanceof ContactError) {
-      return fail(
-        err.status === 400 ? 'bad_request' : 'internal',
-        err.message,
-        err.status
-      );
+      return fail(err.status === 400 ? 'bad_request' : 'internal', err.message, err.status);
     }
     return toApiErrorResponse(err);
   }

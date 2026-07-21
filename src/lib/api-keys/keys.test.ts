@@ -1,11 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  API_KEY_PREFIX,
-  generateApiKey,
-  hashApiKey,
-  looksLikeApiKey,
-  timingSafeHexEqual,
-} from './keys';
+import { API_KEY_PREFIX, generateApiKey, hashApiKey, looksLikeApiKey, timingSafeHexEqual } from './keys';
 
 describe('generateApiKey', () => {
   it('returns a prefixed plaintext, a hash, and a display prefix', () => {

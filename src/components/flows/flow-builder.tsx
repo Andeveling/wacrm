@@ -17,26 +17,11 @@
  * are list-only and have no canvas analogue.
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronDown, ChevronUp, CircleAlert, CornerDownRight, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import {
-  CircleAlert,
-  Plus,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  CornerDownRight,
-} from 'lucide-react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,22 +31,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { ValidationIssue } from '@/lib/flows/validate';
 import { cn } from '@/lib/utils';
-import { type ValidationIssue } from '@/lib/flows/validate';
+import { type BuilderState, useFlowEditor } from './flow-editor-state';
+import { NodeKeySelect } from './forms/fields';
+import { NodeConfigForm } from './forms/node-config-form';
 import {
+  type BuilderNode,
+  groupNodeTypesByCategory,
   NODE_META,
   NodeIconChip,
-  groupNodeTypesByCategory,
+  type NodeType,
   nodeColors,
   slugify,
   summarizeNode,
-  type BuilderNode,
-  type NodeType,
 } from './shared';
-import { NodeConfigForm } from './forms/node-config-form';
-import { NodeKeySelect } from './forms/fields';
 import { IssueLine } from './validation-panel';
-import { useFlowEditor, type BuilderState } from './flow-editor-state';
 
 // ============================================================
 // Local state shape — mirrors the DB but the configs are typed
@@ -89,9 +76,7 @@ export function FlowBuilder() {
   // List-only UI state: which cards are expanded + scroll refs for
   // jump-to-node. The flash itself is read from context (flashKey)
   // so canvas + list share the same source of truth.
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(state.nodes.map((n) => n.node_key))
-  );
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(state.nodes.map((n) => n.node_key)));
   const nodeRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Wrap addNode so the new node opens expanded in the list view
@@ -156,25 +141,18 @@ export function FlowBuilder() {
 
   return (
     <div className="mx-auto flex max-w-3xl flex-col gap-6 px-6 py-7">
-      <TriggerPanel
-        state={state}
-        setState={setState}
-        triggerIssues={issues.filter((i) => i.scope === 'trigger')}
-        t={t}
-      />
+      <TriggerPanel state={state} setState={setState} triggerIssues={issues.filter((i) => i.scope === 'trigger')} t={t} />
 
       <EntryPicker state={state} setState={setState} t={t} />
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-foreground text-sm font-semibold">
-            {t('nodesTitle', { count: state.nodes.length })}
-          </h2>
+          <h2 className="font-semibold text-foreground text-sm">{t('nodesTitle', { count: state.nodes.length })}</h2>
           <AddNodeButton onAdd={addNode} t={t} />
         </div>
 
         {state.nodes.length === 0 ? (
-          <div className="border-border bg-card/50 text-muted-foreground rounded-lg border border-dashed p-8 text-center text-sm">
+          <div className="rounded-lg border border-border border-dashed bg-card/50 p-8 text-center text-muted-foreground text-sm">
             {t.rich('nodesEmpty', { strong: (chunks) => <strong>{chunks}</strong> })}
           </div>
         ) : (
@@ -187,16 +165,12 @@ export function FlowBuilder() {
               isEntry={state.entry_node_id === node.node_key}
               isFlashed={flashKey === node.node_key}
               cardRef={setNodeRef(node.node_key)}
-              issues={issues.filter(
-                (i) => i.scope === 'node' && i.node_key === node.node_key
-              )}
+              issues={issues.filter((i) => i.scope === 'node' && i.node_key === node.node_key)}
               onToggle={() => toggleExpanded(node.node_key)}
               onUpdate={(patch) => updateNode(node.node_key, patch)}
               onUpdateConfig={(patch) => updateNodeConfig(node.node_key, patch)}
               onRemove={() => removeNode(node.node_key)}
-              onSetEntry={() =>
-                setState((s) => ({ ...s, entry_node_id: node.node_key }))
-              }
+              onSetEntry={() => setState((s) => ({ ...s, entry_node_id: node.node_key }))}
               t={t}
             />
           ))
@@ -273,21 +247,18 @@ function TriggerPanel({
   t: ReturnType<typeof useTranslations>;
 }) {
   return (
-    <section className="border-border bg-card rounded-lg border p-4">
-      <h2 className="text-foreground mb-3 text-sm font-semibold">{t('triggerTitle')}</h2>
+    <section className="rounded-lg border border-border bg-card p-4">
+      <h2 className="mb-3 font-semibold text-foreground text-sm">{t('triggerTitle')}</h2>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <div>
-          <label className="text-muted-foreground mb-1 block text-xs">
-            {t('whenLabel')}
-          </label>
+          <label className="mb-1 block text-muted-foreground text-xs">{t('whenLabel')}</label>
           <Select
             value={state.trigger_type}
             onValueChange={(v) =>
               setState((s) => ({
                 ...s,
                 trigger_type: v as BuilderState['trigger_type'],
-                trigger_config:
-                  v === 'keyword' ? { keywords: [] } : v === 'manual' ? {} : {},
+                trigger_config: v === 'keyword' ? { keywords: [] } : v === 'manual' ? {} : {},
               }))
             }
           >
@@ -295,29 +266,17 @@ function TriggerPanel({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="keyword">
-                {t('triggerKeywordTitle')}
-              </SelectItem>
-              <SelectItem value="first_inbound_message">
-                {t('triggerFirstInboundTitle')}
-              </SelectItem>
-              <SelectItem value="manual">
-                {t('triggerManualTitle')}
-              </SelectItem>
+              <SelectItem value="keyword">{t('triggerKeywordTitle')}</SelectItem>
+              <SelectItem value="first_inbound_message">{t('triggerFirstInboundTitle')}</SelectItem>
+              <SelectItem value="manual">{t('triggerManualTitle')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {state.trigger_type === 'keyword' && (
           <div>
-            <label className="text-muted-foreground mb-1 block text-xs">
-              {t('keywordsLabel')}
-            </label>
+            <label className="mb-1 block text-muted-foreground text-xs">{t('keywordsLabel')}</label>
             <KeywordsInput
-              keywords={
-                Array.isArray(state.trigger_config.keywords)
-                  ? (state.trigger_config.keywords as string[])
-                  : []
-              }
+              keywords={Array.isArray(state.trigger_config.keywords) ? (state.trigger_config.keywords as string[]) : []}
               onChange={(keywords) =>
                 setState((s) => ({
                   ...s,
@@ -331,8 +290,8 @@ function TriggerPanel({
       </div>
       {triggerIssues.length > 0 && (
         <div className="mt-3 flex flex-col gap-1">
-          {triggerIssues.map((i, ix) => (
-            <IssueLine key={ix} issue={i} />
+          {triggerIssues.map((i) => (
+            <IssueLine key={`${i.scope}-${i.node_key ?? 'flow'}-${i.field ?? ''}-${i.message}`} issue={i} />
           ))}
         </div>
       )}
@@ -355,8 +314,8 @@ function EntryPicker({
 }) {
   if (state.nodes.length === 0) return null;
   return (
-    <section className="border-border bg-card flex items-center gap-3 rounded-lg border p-3">
-      <CornerDownRight className="text-primary h-4 w-4 shrink-0" />
+    <section className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+      <CornerDownRight className="h-4 w-4 shrink-0 text-primary" />
       <span className="text-muted-foreground text-xs">{t('entryNodeTitle')}</span>
       <NodeKeySelect
         value={state.entry_node_id}
@@ -402,7 +361,7 @@ function NodeCard({
   onSetEntry: () => void;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const meta = NODE_META[node.node_type];
+  const _meta = NODE_META[node.node_type];
   const c = nodeColors(node.node_type);
   const hasError = issues.some((i) => i.severity === 'error');
   const tSummary = useTranslations('Flows.summary');
@@ -411,71 +370,36 @@ function NodeCard({
     <div
       ref={cardRef}
       className={cn(
-        'bg-card relative overflow-hidden rounded-xl border transition-shadow duration-500',
-        hasError
-          ? 'border-red-500/40'
-          : isEntry
-            ? 'border-primary/50'
-            : 'border-border',
-        isFlashed && 'ring-primary ring-offset-background ring-2 ring-offset-2'
+        'relative overflow-hidden rounded-xl border bg-card transition-shadow duration-500',
+        hasError ? 'border-red-500/40' : isEntry ? 'border-primary/50' : 'border-border',
+        isFlashed && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
     >
       {/* type-colored left rail, ties the list row to the canvas hue */}
-      <span
-        className="absolute inset-y-0 left-0 w-[3px]"
-        style={{ background: c.solid }}
-      />
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center gap-3 px-4 py-3 pl-5 text-left"
-      >
+      <span className="absolute inset-y-0 left-0 w-[3px]" style={{ background: c.solid }} />
+      <button type="button" onClick={onToggle} className="flex w-full items-center gap-3 px-4 py-3 pl-5 text-left">
         <NodeIconChip type={node.node_type} size={32} iconSize={16} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span
-              className="truncate text-[11px] font-semibold tracking-wider uppercase"
-              style={{ color: c.text }}
-            >
+            <span className="truncate font-semibold text-[11px] uppercase tracking-wider" style={{ color: c.text }}>
               {t(`nodes.${node.node_type}.label`)}
             </span>
-            <code className="bg-muted text-muted-foreground rounded px-1.5 py-0.5 text-[10px]">
-              {node.node_key}
-            </code>
+            <code className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">{node.node_key}</code>
             {isEntry && (
-              <Badge
-                variant="outline"
-                className="border-primary/40 bg-primary/10 text-primary text-[10px]"
-              >
+              <Badge variant="outline" className="border-primary/40 bg-primary/10 text-[10px] text-primary">
                 {t('badgeEntry')}
               </Badge>
             )}
           </div>
-          {!expanded && preview && (
-            <p className="text-muted-foreground mt-0.5 truncate text-xs">
-              {preview}
-            </p>
-          )}
+          {!expanded && preview && <p className="mt-0.5 truncate text-muted-foreground text-xs">{preview}</p>}
         </div>
-        {hasError && (
-          <CircleAlert className="h-3.5 w-3.5 shrink-0 text-red-400" />
-        )}
-        {expanded ? (
-          <ChevronUp className="text-muted-foreground h-4 w-4" />
-        ) : (
-          <ChevronDown className="text-muted-foreground h-4 w-4" />
-        )}
+        {hasError && <CircleAlert className="h-3.5 w-3.5 shrink-0 text-red-400" />}
+        {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </button>
       {expanded && (
         <div className="border-border border-t px-4 py-4">
-          <NodeConfigWithAdvanced
-            node={node}
-            allNodes={allNodes}
-            onUpdate={onUpdate}
-            onUpdateConfig={onUpdateConfig}
-            t={t}
-          />
-          <div className="border-border mt-4 flex items-center justify-between border-t pt-3">
+          <NodeConfigWithAdvanced node={node} allNodes={allNodes} onUpdate={onUpdate} onUpdateConfig={onUpdateConfig} t={t} />
+          <div className="mt-4 flex items-center justify-between border-border border-t pt-3">
             <div className="flex items-center gap-2">
               {!isEntry && (
                 <Button variant="ghost" size="sm" onClick={onSetEntry}>
@@ -483,20 +407,15 @@ function NodeCard({
                 </Button>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onRemove}
-              className="text-red-400 hover:bg-red-500/10 hover:text-red-300"
-            >
+            <Button variant="ghost" size="sm" onClick={onRemove} className="text-red-400 hover:bg-red-500/10 hover:text-red-300">
               <Trash2 className="h-3.5 w-3.5" />
               {t('removeNode')}
             </Button>
           </div>
           {issues.length > 0 && (
             <div className="mt-3 flex flex-col gap-1 rounded-md bg-red-500/5 p-2">
-              {issues.map((i, ix) => (
-                <IssueLine key={ix} issue={i} />
+              {issues.map((i) => (
+                <IssueLine key={`${i.scope}-${i.node_key ?? 'flow'}-${i.field ?? ''}-${i.message}`} issue={i} />
               ))}
             </div>
           )}
@@ -526,48 +445,30 @@ function NodeConfigWithAdvanced({
   t: ReturnType<typeof useTranslations>;
 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const hasReplyIds =
-    node.node_type === 'send_buttons' || node.node_type === 'send_list';
+  const hasReplyIds = node.node_type === 'send_buttons' || node.node_type === 'send_list';
   return (
     <div className="flex flex-col gap-3">
-      <NodeConfigForm
-        node={node}
-        allNodes={allNodes}
-        showAdvanced={showAdvanced}
-        onUpdateConfig={onUpdateConfig}
-      />
+      <NodeConfigForm node={node} allNodes={allNodes} showAdvanced={showAdvanced} onUpdateConfig={onUpdateConfig} />
       <div className="border-border border-t pt-3">
         <button
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
-          className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 text-xs"
+          className="inline-flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground"
         >
-          {showAdvanced ? (
-            <ChevronUp className="h-3 w-3" />
-          ) : (
-            <ChevronDown className="h-3 w-3" />
-          )}
+          {showAdvanced ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
           {showAdvanced ? t('hideAdvanced') : t('showAdvanced')}
         </button>
         {showAdvanced && (
           <div className="mt-3 flex flex-col gap-3">
             <div>
-              <label className="text-muted-foreground mb-1 block text-xs">
-                {t('nodeKeyLabel')}
-              </label>
+              <label className="mb-1 block text-muted-foreground text-xs">{t('nodeKeyLabel')}</label>
               <Input
                 value={node.node_key}
-                onChange={(e) =>
-                  onUpdate({ node_key: slugify(e.target.value, node.node_key) })
-                }
+                onChange={(e) => onUpdate({ node_key: slugify(e.target.value, node.node_key) })}
                 className="bg-muted font-mono text-xs"
               />
             </div>
-            {hasReplyIds && (
-              <p className="text-muted-foreground text-[10px]">
-                {t('replyIdsHint')}
-              </p>
-            )}
+            {hasReplyIds && <p className="text-[10px] text-muted-foreground">{t('replyIdsHint')}</p>}
           </div>
         )}
       </div>
@@ -595,7 +496,7 @@ function AddNodeButton({ onAdd, t }: { onAdd: (type: NodeType) => void; t: Retur
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        className="border-border bg-card text-foreground hover:bg-muted inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 font-medium text-foreground text-xs transition-colors hover:bg-muted"
         aria-label={t('addNode')}
       >
         <Plus className="h-3.5 w-3.5" />
@@ -610,7 +511,7 @@ function AddNodeButton({ onAdd, t }: { onAdd: (type: NodeType) => void; t: Retur
           <Fragment key={group.id}>
             {i > 0 && <DropdownMenuSeparator />}
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="text-muted-foreground text-[11px] font-semibold tracking-wider uppercase">
+              <DropdownMenuLabel className="font-semibold text-[11px] text-muted-foreground uppercase tracking-wider">
                 {t(`categories.${group.id}`)}
               </DropdownMenuLabel>
               {group.types.map((t_type) => {

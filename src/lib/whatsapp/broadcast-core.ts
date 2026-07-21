@@ -20,12 +20,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
 import { decrypt } from '@/lib/whatsapp/encryption';
 import { sendTemplateMessage } from '@/lib/whatsapp/meta-api';
-import {
-  isRecipientNotAllowedError,
-  isValidE164,
-  phoneVariants,
-  sanitizePhoneForMeta,
-} from '@/lib/whatsapp/phone-utils';
+import { isRecipientNotAllowedError, isValidE164, phoneVariants, sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
 import { isMessageTemplate } from '@/lib/whatsapp/template-row-guard';
 import type { MessageTemplate } from '@/types';
 
@@ -93,33 +88,17 @@ export async function createBroadcast(
     throw new BroadcastError('bad_request', "'template_name' is required", 400);
   }
   if (!Array.isArray(recipients) || recipients.length === 0) {
-    throw new BroadcastError(
-      'bad_request',
-      "'recipients' must be a non-empty array of { to, params? }",
-      400
-    );
+    throw new BroadcastError('bad_request', "'recipients' must be a non-empty array of { to, params? }", 400);
   }
   if (recipients.length > MAX_RECIPIENTS) {
-    throw new BroadcastError(
-      'bad_request',
-      `A broadcast is capped at ${MAX_RECIPIENTS} recipients per request; split larger sends`,
-      400
-    );
+    throw new BroadcastError('bad_request', `A broadcast is capped at ${MAX_RECIPIENTS} recipients per request; split larger sends`, 400);
   }
 
   // Config (fail fast + provides the audit trail owner already resolved
   // by the caller). Meta send needs phone_number_id + decrypted token.
-  const { data: config, error: configError } = await db
-    .from('whatsapp_config')
-    .select('*')
-    .eq('account_id', accountId)
-    .single();
+  const { data: config, error: configError } = await db.from('whatsapp_config').select('*').eq('account_id', accountId).single();
   if (configError || !config) {
-    throw new BroadcastError(
-      'whatsapp_not_configured',
-      'WhatsApp not configured. Please set up your WhatsApp integration first.',
-      400
-    );
+    throw new BroadcastError('whatsapp_not_configured', 'WhatsApp not configured. Please set up your WhatsApp integration first.', 400);
   }
   const accessToken = decrypt(config.access_token);
 
@@ -146,9 +125,7 @@ export async function createBroadcast(
   const resolved: { contactId: string; phone: string; params: string[] }[] = [];
   let rejected = 0;
   for (const r of recipients) {
-    const sanitized = sanitizePhoneForMeta(
-      typeof r.to === 'string' ? r.to : ''
-    );
+    const sanitized = sanitizePhoneForMeta(typeof r.to === 'string' ? r.to : '');
     if (!isValidE164(sanitized)) {
       rejected++;
       continue;
@@ -166,9 +143,7 @@ export async function createBroadcast(
     resolved.push({
       contactId: identity.contact.id,
       phone: sanitized,
-      params: Array.isArray(r.params)
-        ? r.params.filter((p): p is string => typeof p === 'string')
-        : [],
+      params: Array.isArray(r.params) ? r.params.filter((p): p is string => typeof p === 'string') : [],
     });
   }
 
@@ -185,11 +160,7 @@ export async function createBroadcast(
   });
 
   if (deduped.length === 0) {
-    throw new BroadcastError(
-      'bad_request',
-      'No recipients had a valid E.164 phone number',
-      400
-    );
+    throw new BroadcastError('bad_request', 'No recipients had a valid E.164 phone number', 400);
   }
 
   // Persist the broadcast + its recipients. The count columns
@@ -238,7 +209,7 @@ export async function createBroadcast(
   // contact_id — unambiguous now that duplicates are collapsed.
   const byContact = new Map(deduped.map((r) => [r.contactId, r]));
   const planned: PlannedRecipient[] = recipientRows.map((row) => {
-    const r = byContact.get(row.contact_id as string)!;
+    const r = byContact.get(row.contact_id as string) as unknown as PlannedRecipient;
     return { recipientRowId: row.id as string, params: r.params };
   });
 
@@ -267,19 +238,13 @@ export async function createBroadcast(
  * here — only the terminal `status` — otherwise a manual value would
  * race and clobber the trigger-maintained counts.
  */
-export async function deliverBroadcast(
-  db: SupabaseClient,
-  plan: BroadcastPlan
-): Promise<void> {
+export async function deliverBroadcast(db: SupabaseClient, plan: BroadcastPlan): Promise<void> {
   let sentCount = 0;
 
   for (const recipient of plan.planned) {
     // Recheck the materialized recipient immediately before Meta. Archive
     // cancels pending rows, and terminal writes below remain pending-only.
-    const phone = await getDeliverableRecipientPhone(
-      db,
-      recipient.recipientRowId
-    );
+    const phone = await getDeliverableRecipientPhone(db, recipient.recipientRowId);
     if (!phone) continue;
 
     const variants = phoneVariants(phone);
@@ -301,8 +266,7 @@ export async function deliverBroadcast(
         lastError = null;
         break;
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Unknown error';
+        const message = error instanceof Error ? error.message : 'Unknown error';
         lastError = message;
         // Only a "recipient not allowed" error is worth another variant.
         if (!isRecipientNotAllowedError(message)) break;
@@ -339,10 +303,7 @@ export async function deliverBroadcast(
 }
 
 /** Returns a pending recipient's materialized phone only while its contact is active. */
-export async function getDeliverableRecipientPhone(
-  db: SupabaseClient,
-  recipientRowId: string
-): Promise<string | null> {
+export async function getDeliverableRecipientPhone(db: SupabaseClient, recipientRowId: string): Promise<string | null> {
   const { data } = await db
     .from('broadcast_recipients')
     .select('recipient_phone, contacts!inner(archived_at)')
@@ -358,9 +319,7 @@ export async function getDeliverableRecipientPhone(
 export async function completeBroadcastRecipient(
   db: SupabaseClient,
   recipientRowId: string,
-  result:
-    | { status: 'sent'; whatsappMessageId: string }
-    | { status: 'failed'; errorMessage: string }
+  result: { status: 'sent'; whatsappMessageId: string } | { status: 'failed'; errorMessage: string }
 ): Promise<boolean> {
   const update =
     result.status === 'sent'

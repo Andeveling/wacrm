@@ -1,13 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  runAutomationsForTrigger,
-  type AutomationContext,
-} from '@/lib/automations/engine';
+import { type AutomationContext, runAutomationsForTrigger } from '@/lib/automations/engine';
+import { getTagChainDepth, MAX_TAG_CHAIN_DEPTH } from './tag-chain';
 import { addContactTagIfAbsent } from './tag-write';
-import { MAX_TAG_CHAIN_DEPTH, getTagChainDepth } from './tag-chain';
 
-export { MAX_TAG_CHAIN_DEPTH, getTagChainDepth } from './tag-chain';
+export { getTagChainDepth, MAX_TAG_CHAIN_DEPTH } from './tag-chain';
 
 interface AddContactTagAndDispatchInput {
   db: SupabaseClient;
@@ -27,9 +24,7 @@ export interface AddContactTagResult {
  * Central server-side tag writer. It dispatches tag_added only for a
  * newly-created join and caps chained tag automations to avoid loops.
  */
-export async function addContactTagAndDispatch(
-  input: AddContactTagAndDispatchInput
-): Promise<AddContactTagResult> {
+export async function addContactTagAndDispatch(input: AddContactTagAndDispatchInput): Promise<AddContactTagResult> {
   const added = await addContactTagIfAbsent(input.db, {
     accountId: input.accountId,
     contactId: input.contactId,

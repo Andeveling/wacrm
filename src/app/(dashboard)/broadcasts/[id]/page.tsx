@@ -1,44 +1,29 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
-import { Broadcast, BroadcastRecipient, RecipientStatus } from '@/types';
-import { Button } from '@/components/ui/button';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-  ArrowLeft,
-  Loader2,
-  Users,
-  Send,
-  CheckCheck,
-  Eye,
   AlertCircle,
-  MessageCircle,
-  Filter,
-  Download,
+  ArrowLeft,
+  CheckCheck,
   ChevronDown,
+  Download,
+  Eye,
+  Filter,
+  Loader2,
+  MessageCircle,
+  Send,
   Trash2,
+  Users,
 } from 'lucide-react';
-import { toast } from 'sonner';
-import {
-  getBroadcastStatus,
-  getRecipientStatus,
-} from '@/lib/broadcast-status';
+import { useParams, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { getBroadcastStatus, getRecipientStatus } from '@/lib/broadcast-status';
+import { createClient } from '@/lib/supabase/client';
+import type { Broadcast, BroadcastRecipient, RecipientStatus } from '@/types';
 
 interface StatCardProps {
   label: string;
@@ -53,13 +38,11 @@ function StatCard({ label, value, total, icon, color }: StatCardProps) {
   return (
     <div className="rounded-xl border border-border bg-card p-4">
       <div className="flex items-center justify-between">
-        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${color}`}>
-          {icon}
-        </div>
-        <span className="text-xs text-muted-foreground">{pct}%</span>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${color}`}>{icon}</div>
+        <span className="text-muted-foreground text-xs">{pct}%</span>
       </div>
-      <p className="mt-3 text-2xl font-bold text-foreground">{value.toLocaleString()}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-3 font-bold text-2xl text-foreground">{value.toLocaleString()}</p>
+      <p className="text-muted-foreground text-xs">{label}</p>
     </div>
   );
 }
@@ -79,29 +62,19 @@ function FunnelChart({ steps }: { steps: FunnelStep[] }) {
   const max = Math.max(...steps.map((s) => s.value), 1);
   return (
     <div className="rounded-xl border border-border bg-card p-4">
-      <h3 className="mb-4 text-sm font-medium text-foreground">Funnel</h3>
+      <h3 className="mb-4 font-medium text-foreground text-sm">Funnel</h3>
       <div className="space-y-2">
         {steps.map((step) => {
           const pctOfMax = Math.max(5, Math.round((step.value / max) * 100));
-          const pctOfSent =
-            steps[0].value > 0
-              ? Math.round((step.value / steps[0].value) * 100)
-              : 0;
+          const pctOfSent = steps[0].value > 0 ? Math.round((step.value / steps[0].value) * 100) : 0;
           return (
             <div key={step.label} className="flex items-center gap-3">
-              <span className="w-20 shrink-0 text-xs text-muted-foreground">
-                {step.label}
-              </span>
+              <span className="w-20 shrink-0 text-muted-foreground text-xs">{step.label}</span>
               <div className="relative h-7 flex-1 rounded-full bg-muted">
-                <div
-                  className={`h-7 rounded-full ${step.color} transition-[width] duration-500`}
-                  style={{ width: `${pctOfMax}%` }}
-                />
-                <span className="absolute inset-0 flex items-center px-3 text-xs font-medium text-foreground">
+                <div className={`h-7 rounded-full ${step.color} transition-[width] duration-500`} style={{ width: `${pctOfMax}%` }} />
+                <span className="absolute inset-0 flex items-center px-3 font-medium text-foreground text-xs">
                   {step.value.toLocaleString()}
-                  <span className="ml-2 text-muted-foreground/80">
-                    ({pctOfSent}%)
-                  </span>
+                  <span className="ml-2 text-muted-foreground/80">({pctOfSent}%)</span>
                 </span>
               </div>
             </div>
@@ -112,22 +85,15 @@ function FunnelChart({ steps }: { steps: FunnelStep[] }) {
   );
 }
 
-const RECIPIENT_STATUSES: readonly RecipientStatus[] = [
-  'pending',
-  'sent',
-  'delivered',
-  'read',
-  'replied',
-  'failed',
-];
+const RECIPIENT_STATUSES: readonly RecipientStatus[] = ['pending', 'sent', 'delivered', 'read', 'replied', 'failed'];
 
 /**
  * CSV export helper — RFC 4180 quoting. Quote every field so
  * commas/newlines/quotes round-trip cleanly.
  */
 function toCsv(rows: string[][]): string {
-  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
-  return rows.map((r) => r.map(escape).join(',')).join('\n');
+  const quote = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  return rows.map((r) => r.map(quote).join(',')).join('\n');
 }
 
 function downloadBlob(filename: string, content: string) {
@@ -153,9 +119,7 @@ export default function BroadcastDetailPage() {
   const [recipients, setRecipients] = useState<BroadcastRecipient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<RecipientStatus | 'all'>(
-    'all',
-  );
+  const [statusFilter, setStatusFilter] = useState<RecipientStatus | 'all'>('all');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -164,11 +128,7 @@ export default function BroadcastDetailPage() {
       try {
         const supabase = createClient();
 
-        const { data: bc, error: bcError } = await supabase
-          .from('broadcasts')
-          .select('*')
-          .eq('id', broadcastId)
-          .single();
+        const { data: bc, error: bcError } = await supabase.from('broadcasts').select('*').eq('id', broadcastId).single();
 
         if (bcError) throw bcError;
         setBroadcast(bc);
@@ -189,14 +149,11 @@ export default function BroadcastDetailPage() {
     }
 
     fetchData();
-  }, [broadcastId]);
+  }, [broadcastId, t]);
 
   const filteredRecipients = useMemo(
-    () =>
-      statusFilter === 'all'
-        ? recipients
-        : recipients.filter((r) => r.status === statusFilter),
-    [recipients, statusFilter],
+    () => (statusFilter === 'all' ? recipients : recipients.filter((r) => r.status === statusFilter)),
+    [recipients, statusFilter]
   );
 
   function handleExport() {
@@ -231,10 +188,7 @@ export default function BroadcastDetailPage() {
     // single delete is sufficient — the aggregate trigger in migration 003
     // is defined on broadcast_recipients but fires only on its own row
     // changes, not on a cascaded drop of the parent row.
-    const { error: delErr } = await supabase
-      .from('broadcasts')
-      .delete()
-      .eq('id', broadcastId);
+    const { error: delErr } = await supabase.from('broadcasts').delete().eq('id', broadcastId);
     setDeleting(false);
     if (delErr) {
       toast.error(t('toastFailedDelete', { error: delErr.message }));
@@ -255,7 +209,7 @@ export default function BroadcastDetailPage() {
   if (error || !broadcast) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-red-400">{error ?? t('notFound')}</p>
+        <p className="text-red-400 text-sm">{error ?? t('notFound')}</p>
         <Button variant="outline" onClick={() => router.push('/broadcasts')}>
           {t('backToBroadcasts')}
         </Button>
@@ -277,29 +231,20 @@ export default function BroadcastDetailPage() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => router.push('/broadcasts')}
-            className="border-border"
-          >
+          <Button variant="outline" size="icon" onClick={() => router.push('/broadcasts')} className="border-border">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-foreground">{broadcast.name}</h1>
-              <span
-                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${status.classes}`}
-              >
+              <h1 className="font-bold text-2xl text-foreground">{broadcast.name}</h1>
+              <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium text-xs ${status.classes}`}>
                 {tStatus(status.label)}
               </span>
             </div>
-            <div className="mt-1 flex items-center gap-3 text-sm text-muted-foreground">
+            <div className="mt-1 flex items-center gap-3 text-muted-foreground text-sm">
               <span>{t('template', { name: broadcast.template_name })}</span>
               <span>-</span>
-              <span>
-                {t('createdAt', { date: new Date(broadcast.created_at).toLocaleDateString() })}
-              </span>
+              <span>{t('createdAt', { date: new Date(broadcast.created_at).toLocaleDateString() })}</span>
             </div>
           </div>
         </div>
@@ -335,11 +280,7 @@ export default function BroadcastDetailPage() {
             size="sm"
             disabled={broadcast.status === 'sending'}
             onClick={() => setConfirmDelete(true)}
-            title={
-              broadcast.status === 'sending'
-                ? t('cannotDeleteSending')
-                : t('deleteHover')
-            }
+            title={broadcast.status === 'sending' ? t('cannotDeleteSending') : t('deleteHover')}
             className="border-red-500/30 bg-transparent text-red-400 hover:bg-red-500/10 disabled:opacity-40"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -398,8 +339,8 @@ export default function BroadcastDetailPage() {
 
       {/* Recipients Table */}
       <div className="rounded-xl border border-border bg-card">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
-          <h2 className="text-sm font-medium text-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-border border-b px-4 py-3">
+          <h2 className="font-medium text-foreground text-sm">
             {statusFilter !== 'all'
               ? t('recipientsHeader', { filtered: filteredRecipients.length, total: recipients.length })
               : t('recipientsHeaderAll', { total: recipients.length })}
@@ -407,26 +348,16 @@ export default function BroadcastDetailPage() {
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-border text-muted-foreground hover:bg-muted"
-                  />
-                }
+                render={<Button variant="outline" size="sm" className="border-border text-muted-foreground hover:bg-muted" />}
               >
                 <Filter className="h-3.5 w-3.5" />
-                {statusFilter === 'all'
-                  ? t('allStatuses')
-                  : tStatus(getRecipientStatus(statusFilter).label)}
+                {statusFilter === 'all' ? t('allStatuses') : tStatus(getRecipientStatus(statusFilter).label)}
                 <ChevronDown className="h-3 w-3" />
               </DropdownMenuTrigger>
               <DropdownMenuContent className="border-border bg-popover">
                 <DropdownMenuItem
                   onClick={() => setStatusFilter('all')}
-                  className={
-                    statusFilter === 'all' ? 'text-primary' : 'text-popover-foreground'
-                  }
+                  className={statusFilter === 'all' ? 'text-primary' : 'text-popover-foreground'}
                 >
                   {t('allStatuses')}
                 </DropdownMenuItem>
@@ -434,11 +365,7 @@ export default function BroadcastDetailPage() {
                   <DropdownMenuItem
                     key={s}
                     onClick={() => setStatusFilter(s)}
-                    className={
-                      statusFilter === s
-                        ? 'text-primary'
-                        : 'text-popover-foreground'
-                    }
+                    className={statusFilter === s ? 'text-primary' : 'text-popover-foreground'}
                   >
                     {tStatus(getRecipientStatus(s).label)}
                   </DropdownMenuItem>
@@ -461,11 +388,7 @@ export default function BroadcastDetailPage() {
 
         {filteredRecipients.length === 0 ? (
           <div className="flex h-32 items-center justify-center">
-            <p className="text-sm text-muted-foreground">
-              {recipients.length === 0
-                ? t('noRecipients')
-                : t('noRecipientsFilter')}
-            </p>
+            <p className="text-muted-foreground text-sm">{recipients.length === 0 ? t('noRecipients') : t('noRecipientsFilter')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -486,37 +409,23 @@ export default function BroadcastDetailPage() {
                   const rStatus = getRecipientStatus(recipient.status);
                   return (
                     <TableRow key={recipient.id} className="border-border">
-                      <TableCell className="font-medium text-foreground">
-                        {recipient.contact?.name ?? 'Unknown'}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {recipient.contact?.phone ?? '-'}
-                      </TableCell>
+                      <TableCell className="font-medium text-foreground">{recipient.contact?.name ?? 'Unknown'}</TableCell>
+                      <TableCell className="text-muted-foreground">{recipient.contact?.phone ?? '-'}</TableCell>
                       <TableCell>
-                        <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${rStatus.classes}`}
-                        >
+                        <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium text-xs ${rStatus.classes}`}>
                           {tStatus(rStatus.label)}
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {recipient.sent_at
-                          ? new Date(recipient.sent_at).toLocaleString()
-                          : '-'}
+                        {recipient.sent_at ? new Date(recipient.sent_at).toLocaleString() : '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {recipient.delivered_at
-                          ? new Date(recipient.delivered_at).toLocaleString()
-                          : '-'}
+                        {recipient.delivered_at ? new Date(recipient.delivered_at).toLocaleString() : '-'}
                       </TableCell>
                       <TableCell className="text-muted-foreground">
-                        {recipient.read_at
-                          ? new Date(recipient.read_at).toLocaleString()
-                          : '-'}
+                        {recipient.read_at ? new Date(recipient.read_at).toLocaleString() : '-'}
                       </TableCell>
-                      <TableCell className="max-w-xs truncate text-xs text-red-400">
-                        {recipient.error_message ?? '-'}
-                      </TableCell>
+                      <TableCell className="max-w-xs truncate text-red-400 text-xs">{recipient.error_message ?? '-'}</TableCell>
                     </TableRow>
                   );
                 })}

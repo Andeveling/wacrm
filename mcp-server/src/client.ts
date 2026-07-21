@@ -39,7 +39,7 @@ export class WacrmClient {
   private async request<T>(
     method: string,
     path: string,
-    options: { query?: Record<string, string | number | undefined>; body?: unknown } = {},
+    options: { query?: Record<string, string | number | undefined>; body?: unknown } = {}
   ): Promise<{ data: T; meta?: { next_cursor: string | null } }> {
     const url = new URL(`${this.baseUrl}/api/v1${path}`);
     if (options.query) {
@@ -66,15 +66,11 @@ export class WacrmClient {
         body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
       });
     } catch (err) {
-      throw new WacrmApiError(
-        0,
-        'network_error',
-        `Could not reach wacrm at ${this.baseUrl}: ${(err as Error).message}`,
-      );
+      throw new WacrmApiError(0, 'network_error', `Could not reach wacrm at ${this.baseUrl}: ${(err as Error).message}`);
     }
 
     // 429s carry a Retry-After we surface to the model.
-    let payload: unknown = undefined;
+    let payload: unknown;
     const text = await res.text();
     if (text) {
       try {
@@ -102,10 +98,7 @@ export class WacrmClient {
     return { data: envelope.data, meta: envelope.meta };
   }
 
-  private async list<T>(
-    path: string,
-    query: Record<string, string | number | undefined>,
-  ): Promise<Paginated<T>> {
+  private async list<T>(path: string, query: Record<string, string | number | undefined>): Promise<Paginated<T>> {
     const res = await this.request<T[]>('GET', path, { query });
     return { data: res.data, next_cursor: res.meta?.next_cursor ?? null };
   }
@@ -124,12 +117,7 @@ export class WacrmClient {
 
   // --- Contacts -----------------------------------------------------
 
-  listContacts(query: {
-    limit?: number;
-    cursor?: string;
-    search?: string;
-    tag?: string;
-  }): Promise<Paginated<unknown>> {
+  listContacts(query: { limit?: number; cursor?: string; search?: string; tag?: string }): Promise<Paginated<unknown>> {
     return this.list('/contacts', query);
   }
 
@@ -147,12 +135,7 @@ export class WacrmClient {
 
   // --- Conversations ------------------------------------------------
 
-  listConversations(query: {
-    limit?: number;
-    cursor?: string;
-    status?: string;
-    contact_id?: string;
-  }): Promise<Paginated<unknown>> {
+  listConversations(query: { limit?: number; cursor?: string; status?: string; contact_id?: string }): Promise<Paginated<unknown>> {
     return this.list('/conversations', query);
   }
 
@@ -160,10 +143,7 @@ export class WacrmClient {
     return this.request('GET', `/conversations/${encodeURIComponent(id)}`);
   }
 
-  listConversationMessages(
-    id: string,
-    query: { limit?: number; cursor?: string },
-  ): Promise<Paginated<unknown>> {
+  listConversationMessages(id: string, query: { limit?: number; cursor?: string }): Promise<Paginated<unknown>> {
     return this.list(`/conversations/${encodeURIComponent(id)}/messages`, query);
   }
 

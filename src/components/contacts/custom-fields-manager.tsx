@@ -1,21 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
-import { toast } from 'sonner';
-import type { CustomField } from '@/types';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/lib/supabase/client';
+import type { CustomField } from '@/types';
 
 interface CustomFieldsManagerProps {
   open: boolean;
@@ -28,19 +22,14 @@ interface CustomFieldsManagerProps {
  * editing UI lives in one place. Radix unmounts the dialog content on close,
  * so the panel remounts (and refetches) on each open.
  */
-export function CustomFieldsManager({
-  open,
-  onOpenChange,
-}: CustomFieldsManagerProps) {
+export function CustomFieldsManager({ open, onOpenChange }: CustomFieldsManagerProps) {
   const t = useTranslations('Contacts.customFields');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-popover-foreground">{t('title')}</DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            {t('desc')}
-          </DialogDescription>
+          <DialogDescription className="text-muted-foreground">{t('desc')}</DialogDescription>
         </DialogHeader>
         <CustomFieldsPanel />
       </DialogContent>
@@ -68,10 +57,7 @@ export function CustomFieldsPanel() {
   const fetchFields = useCallback(async () => {
     if (!accountId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('custom_fields')
-      .select('*')
-      .order('field_name');
+    const { data } = await supabase.from('custom_fields').select('*').order('field_name');
     setFields((data as CustomField[] | null) ?? []);
     setLoading(false);
   }, [supabase, accountId]);
@@ -89,9 +75,7 @@ export function CustomFieldsPanel() {
   /** Case-insensitive name clash within the loaded list. */
   function isDuplicate(name: string, exceptId?: string): boolean {
     const lower = name.toLowerCase();
-    return fields.some(
-      (f) => f.id !== exceptId && f.field_name.toLowerCase() === lower
-    );
+    return fields.some((f) => f.id !== exceptId && f.field_name.toLowerCase() === lower);
   }
 
   async function handleCreate() {
@@ -126,10 +110,7 @@ export function CustomFieldsPanel() {
 
   /** Returns true on success so the row can keep the new name, false so it
    *  reverts to the previous one. No-ops (blank / unchanged) count as success. */
-  async function handleRename(
-    field: CustomField,
-    nextName: string
-  ): Promise<boolean> {
+  async function handleRename(field: CustomField, nextName: string): Promise<boolean> {
     const name = nextName.trim();
     if (!name || name === field.field_name) return true;
     if (isDuplicate(name, field.id)) {
@@ -137,10 +118,7 @@ export function CustomFieldsPanel() {
       return false;
     }
     setBusyId(field.id);
-    const { error } = await supabase
-      .from('custom_fields')
-      .update({ field_name: name })
-      .eq('id', field.id);
+    const { error } = await supabase.from('custom_fields').update({ field_name: name }).eq('id', field.id);
     setBusyId(null);
     if (error) {
       toast.error(t('toastRenameFailed'));
@@ -151,18 +129,11 @@ export function CustomFieldsPanel() {
   }
 
   async function handleDelete(field: CustomField) {
-    if (
-      !window.confirm(
-        t('deleteConfirm', { name: field.field_name })
-      )
-    ) {
+    if (!window.confirm(t('deleteConfirm', { name: field.field_name }))) {
       return;
     }
     setBusyId(field.id);
-    const { error } = await supabase
-      .from('custom_fields')
-      .delete()
-      .eq('id', field.id);
+    const { error } = await supabase.from('custom_fields').delete().eq('id', field.id);
     setBusyId(null);
     if (error) {
       toast.error(t('toastDeleteFailed'));
@@ -191,13 +162,9 @@ export function CustomFieldsPanel() {
         <Button
           onClick={handleCreate}
           disabled={creating || !newName.trim()}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
+          className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
         >
-          {creating ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Plus className="size-4" />
-          )}
+          {creating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
           {t('addField')}
         </Button>
       </div>
@@ -205,24 +172,16 @@ export function CustomFieldsPanel() {
       {/* List */}
       <div className="max-h-72 overflow-y-auto rounded-md border border-border">
         {loading ? (
-          <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+          <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground text-sm">
             <Loader2 className="size-4 animate-spin" />
             {t('loading')}
           </div>
         ) : fields.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">
-            {t('empty')}
-          </p>
+          <p className="py-8 text-center text-muted-foreground text-sm">{t('empty')}</p>
         ) : (
           <ul className="divide-y divide-border">
             {fields.map((field) => (
-              <FieldRow
-                key={field.id}
-                field={field}
-                busy={busyId === field.id}
-                onRename={handleRename}
-                onDelete={handleDelete}
-              />
+              <FieldRow key={field.id} field={field} busy={busyId === field.id} onRename={handleRename} onDelete={handleDelete} />
             ))}
           </ul>
         )}
@@ -267,7 +226,7 @@ function FieldRow({
           if (e.key === 'Enter') e.currentTarget.blur();
         }}
         aria-label={t('renameAria', { name: field.field_name })}
-        className="focus:border-primary h-8 border-transparent bg-transparent text-foreground hover:border-border"
+        className="h-8 border-transparent bg-transparent text-foreground hover:border-border focus:border-primary"
       />
       <Button
         variant="ghost"
@@ -277,11 +236,7 @@ function FieldRow({
         title={t('deleteTitle')}
         className="shrink-0 text-muted-foreground hover:text-red-400"
       >
-        {busy ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Trash2 className="size-4" />
-        )}
+        {busy ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
       </Button>
     </li>
   );

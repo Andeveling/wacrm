@@ -27,7 +27,7 @@ import {
   PlayCircle,
   Tag,
   UserPlus,
-  Workflow,
+  type Workflow,
 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -174,9 +174,7 @@ export const NODE_META: Record<
  * of the input list. Empty categories are dropped. Used by both the
  * canvas and list add-step menus so they stay in lockstep.
  */
-export function groupNodeTypesByCategory(
-  types: NodeType[]
-): { id: NodeCategory; label: string; types: NodeType[] }[] {
+export function groupNodeTypesByCategory(types: NodeType[]): { id: NodeCategory; label: string; types: NodeType[] }[] {
   return NODE_CATEGORIES.map(({ id, label }) => ({
     id,
     label,
@@ -262,10 +260,7 @@ export function NodeIconChip({
   const Icon = meta.icon;
   return (
     <span
-      className={cn(
-        'flex shrink-0 items-center justify-center rounded-lg',
-        className
-      )}
+      className={cn('flex shrink-0 items-center justify-center rounded-lg', className)}
       style={{ width: size, height: size, background: c.soft, color: c.solid }}
     >
       <Icon size={iconSize} />
@@ -302,13 +297,10 @@ export function slugify(s: string, fallback: string): string {
 export function truncate(s: string, max = 80): string {
   const clean = s.replace(/\s+/g, ' ').trim();
   if (clean.length <= max) return clean;
-  return clean.slice(0, max - 1) + '…';
+  return `${clean.slice(0, max - 1)}…`;
 }
 
-export function summarizeNode(
-  node: BuilderNode,
-  t?: (key: string, values?: Record<string, string | number>) => string
-): string | null {
+export function summarizeNode(node: BuilderNode, t?: (key: string, values?: Record<string, string | number>) => string): string | null {
   const cfg = node.config;
   switch (node.node_type) {
     case 'start':
@@ -320,25 +312,19 @@ export function summarizeNode(
     }
     case 'send_buttons': {
       const text = typeof cfg.text === 'string' ? cfg.text : '';
-      const buttons = Array.isArray(cfg.buttons)
-        ? (cfg.buttons as Array<Record<string, unknown>>)
-        : [];
+      const buttons = Array.isArray(cfg.buttons) ? (cfg.buttons as Array<Record<string, unknown>>) : [];
       const titles = buttons
         .map((b) => (typeof b.title === 'string' ? b.title : ''))
         .filter(Boolean)
         .join(' / ');
       if (text.length > 0) {
-        return titles
-          ? `${truncate(text, 40)} · ${truncate(titles, 35)}`
-          : truncate(text);
+        return titles ? `${truncate(text, 40)} · ${truncate(titles, 35)}` : truncate(text);
       }
       return titles || null;
     }
     case 'send_list': {
       const text = typeof cfg.text === 'string' ? cfg.text : '';
-      const sections = Array.isArray(cfg.sections)
-        ? (cfg.sections as Array<Record<string, unknown>>)
-        : [];
+      const sections = Array.isArray(cfg.sections) ? (cfg.sections as Array<Record<string, unknown>>) : [];
       const rowCount = sections.reduce<number>((sum, s) => {
         const rows = Array.isArray(s.rows) ? s.rows : [];
         return sum + rows.length;
@@ -355,70 +341,72 @@ export function summarizeNode(
         : null;
     }
     case 'send_media': {
-      const mediaType =
-        typeof cfg.media_type === 'string' ? cfg.media_type : '';
+      const mediaType = typeof cfg.media_type === 'string' ? cfg.media_type : '';
       const filename = typeof cfg.filename === 'string' ? cfg.filename : '';
       const url = typeof cfg.media_url === 'string' ? cfg.media_url : '';
       const caption = typeof cfg.caption === 'string' ? cfg.caption : '';
       const label = mediaType
-        ? t ? t(mediaType) || (mediaType.charAt(0).toUpperCase() + mediaType.slice(1)) : mediaType.charAt(0).toUpperCase() + mediaType.slice(1)
-        : t ? t('media') : 'Media';
+        ? t
+          ? t(mediaType) || mediaType.charAt(0).toUpperCase() + mediaType.slice(1)
+          : mediaType.charAt(0).toUpperCase() + mediaType.slice(1)
+        : t
+          ? t('media')
+          : 'Media';
       if (!url) return t ? t('noFile', { label }) : `${label} (no file uploaded)`;
       const name = filename || url.split('/').pop() || 'file';
-      return caption
-        ? `${label}: ${truncate(name, 30)} · ${truncate(caption, 40)}`
-        : `${label}: ${truncate(name, 60)}`;
+      return caption ? `${label}: ${truncate(name, 30)} · ${truncate(caption, 40)}` : `${label}: ${truncate(name, 60)}`;
     }
     case 'collect_input': {
       const prompt = typeof cfg.prompt_text === 'string' ? cfg.prompt_text : '';
       const varKey = typeof cfg.var_key === 'string' ? cfg.var_key : '';
       if (prompt.length > 0) {
-        return varKey
-          ? `${truncate(prompt, 50)} → vars.${varKey}`
-          : truncate(prompt);
+        return varKey ? `${truncate(prompt, 50)} → vars.${varKey}` : truncate(prompt);
       }
       return varKey ? `→ vars.${varKey}` : null;
     }
     case 'condition': {
-      const subjectKey =
-        typeof cfg.subject_key === 'string' ? cfg.subject_key : '';
+      const subjectKey = typeof cfg.subject_key === 'string' ? cfg.subject_key : '';
       if (!subjectKey) return null;
-      const subject =
-        cfg.subject === 'tag'
-          ? 'tag'
-          : cfg.subject === 'contact_field'
-            ? 'field'
-            : 'var';
+      const subject = cfg.subject === 'tag' ? 'tag' : cfg.subject === 'contact_field' ? 'field' : 'var';
       const subjectStr =
         subject === 'tag'
-          ? t ? t('hasTag', { tag: truncate(subjectKey, 24) }) : `has tag ${truncate(subjectKey, 24)}`
+          ? t
+            ? t('hasTag', { tag: truncate(subjectKey, 24) })
+            : `has tag ${truncate(subjectKey, 24)}`
           : `${subject}.${subjectKey}`;
       const op =
         cfg.operator === 'equals'
           ? '=='
           : cfg.operator === 'contains'
-            ? t ? t('opContains') : 'contains'
+            ? t
+              ? t('opContains')
+              : 'contains'
             : cfg.operator === 'present'
-              ? t ? t('opExists') : 'exists'
+              ? t
+                ? t('opExists')
+                : 'exists'
               : cfg.operator === 'absent'
-                ? t ? t('opMissing') : 'missing'
+                ? t
+                  ? t('opMissing')
+                  : 'missing'
                 : '';
       const value = typeof cfg.value === 'string' ? cfg.value : '';
-      const valStr =
-        (cfg.operator === 'equals' || cfg.operator === 'contains') && value
-          ? ` "${truncate(value, 20)}"`
-          : '';
+      const valStr = (cfg.operator === 'equals' || cfg.operator === 'contains') && value ? ` "${truncate(value, 20)}"` : '';
       return subject === 'tag' ? subjectStr : `${subjectStr} ${op}${valStr}`;
     }
     case 'set_tag': {
-      const mode = cfg.mode === 'remove' ? (t ? t('modeRemove') : 'Remove') : (t ? t('modeAdd') : 'Add');
+      const mode = cfg.mode === 'remove' ? (t ? t('modeRemove') : 'Remove') : t ? t('modeAdd') : 'Add';
       const tagId = typeof cfg.tag_id === 'string' ? cfg.tag_id : '';
       // No tag name available without an async lookup here; show a
       // short prefix of the UUID so users can disambiguate between
       // multiple set_tag nodes at a glance.
       return tagId
-        ? t ? t('tagPicked', { mode, tag: tagId.slice(0, 8) }) : `${mode} tag ${tagId.slice(0, 8)}…`
-        : t ? t('tagNone', { mode }) : `${mode} tag (none picked)`;
+        ? t
+          ? t('tagPicked', { mode, tag: tagId.slice(0, 8) })
+          : `${mode} tag ${tagId.slice(0, 8)}…`
+        : t
+          ? t('tagNone', { mode })
+          : `${mode} tag (none picked)`;
     }
     case 'handoff': {
       const note = typeof cfg.note === 'string' ? cfg.note : '';

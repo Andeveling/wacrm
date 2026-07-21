@@ -1,10 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { describe, expect, it } from 'vitest';
 
-import {
-  resolveBroadcastCsvContacts,
-  resolveContactIdentity,
-} from './resolve-identity';
+import { resolveBroadcastCsvContacts, resolveContactIdentity } from './resolve-identity';
 
 type Contact = {
   id: string;
@@ -15,11 +12,7 @@ type Contact = {
   company?: string | null;
 };
 
-function makeDb(options: {
-  contacts?: (Contact | null)[];
-  created?: Contact | null;
-  createError?: { code: string } | null;
-}) {
+function makeDb(options: { contacts?: (Contact | null)[]; created?: Contact | null; createError?: { code: string } | null }) {
   const contacts = [...(options.contacts ?? [null])];
   const inserts: Record<string, unknown>[] = [];
   const updates: Record<string, unknown>[] = [];
@@ -31,8 +24,7 @@ function makeDb(options: {
   const builder: Record<string, unknown> = {
     select: () => builder,
     eq: () => builder,
-    maybeSingle: () =>
-      Promise.resolve({ data: contacts.shift() ?? null, error: null }),
+    maybeSingle: () => Promise.resolve({ data: contacts.shift() ?? null, error: null }),
     insert: (value: Record<string, unknown>) => {
       operation = 'insert';
       payload = value;
@@ -161,9 +153,10 @@ describe('resolveContactIdentity', () => {
     };
     const { db, tags, updates } = makeDb({ contacts: [existing] });
 
-    await expect(
-      resolveContactIdentity(db, { ...base, name: '', tagIds: ['tag-1'] })
-    ).resolves.toEqual({ status: 'existing', contact: existing });
+    await expect(resolveContactIdentity(db, { ...base, name: '', tagIds: ['tag-1'] })).resolves.toEqual({
+      status: 'existing',
+      contact: existing,
+    });
 
     expect(updates).toEqual([]);
     expect(tags).toEqual([{ contact_id: 'existing', tag_id: 'tag-1' }]);
@@ -195,9 +188,7 @@ describe('resolveContactIdentity', () => {
     };
     const { db, updates } = makeDb({ contacts: [archived] });
 
-    await expect(
-      resolveContactIdentity(db, { ...base, intent: 'outbound' })
-    ).resolves.toBeNull();
+    await expect(resolveContactIdentity(db, { ...base, intent: 'outbound' })).resolves.toBeNull();
     expect(updates).toEqual([]);
   });
 
@@ -218,11 +209,7 @@ describe('resolveContactIdentity', () => {
       resolveBroadcastCsvContacts(db, {
         accountId: base.accountId,
         auditUserId: base.auditUserId,
-        rows: [
-          { phone: archived.phone },
-          { phone: archived.phone },
-          { phone: created.phone, name: 'New contact' },
-        ],
+        rows: [{ phone: archived.phone }, { phone: archived.phone }, { phone: created.phone, name: 'New contact' }],
       })
     ).resolves.toMatchObject({
       archivedRowsExcluded: 2,

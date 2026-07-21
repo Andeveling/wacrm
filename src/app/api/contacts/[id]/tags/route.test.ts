@@ -8,9 +8,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/lib/auth/account', () => ({
   requireRole: mocks.requireRole,
-  toErrorResponse: vi.fn(() =>
-    Response.json({ error: 'auth failed' }, { status: 403 })
-  ),
+  toErrorResponse: vi.fn(() => Response.json({ error: 'auth failed' }, { status: 403 })),
 }));
 
 vi.mock('@/lib/contacts/tag-events', () => ({
@@ -80,10 +78,7 @@ describe('/api/contacts/[id]/tags', () => {
   it('removes a tag through the same account-scoped route', async () => {
     mocks.remove.mockResolvedValue(undefined);
 
-    const response = await DELETE(
-      request('DELETE', { tag_id: 'tag-1' }),
-      params
-    );
+    const response = await DELETE(request('DELETE', { tag_id: 'tag-1' }), params);
 
     expect(response.status).toBe(200);
     expect(mocks.remove).toHaveBeenCalledWith(context.supabase, {

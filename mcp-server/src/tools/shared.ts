@@ -29,9 +29,7 @@ export function errorResult(message: string): CallToolResult {
  * Wrap a tool handler so any WacrmApiError becomes a clean, model-
  * readable error result and unexpected throws don't crash the server.
  */
-export function handle<A>(
-  fn: (args: A) => Promise<CallToolResult>,
-): (args: A) => Promise<CallToolResult> {
+export function handle<A>(fn: (args: A) => Promise<CallToolResult>): (args: A) => Promise<CallToolResult> {
   return async (args: A) => {
     try {
       return await fn(args);

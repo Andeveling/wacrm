@@ -21,60 +21,26 @@
 //   the role anyway.
 // ============================================================
 
+import { AlertTriangle, Loader2, Mail, MailX, Plus, Trash2, UsersRound } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  AlertTriangle,
-  Loader2,
-  Mail,
-  MailX,
-  Plus,
-  Trash2,
-  UsersRound,
-} from 'lucide-react';
-
-import {
-  Avatar,
-  AvatarBadge,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar';
+import { RequireRole } from '@/components/auth/require-role';
+import { PRESENCE_DOT_CLASS, PresenceDot } from '@/components/presence/presence-dot';
+import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useTranslations } from 'next-intl';
-import { RequireRole } from '@/components/auth/require-role';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/use-auth';
 import { usePresence } from '@/hooks/use-presence';
 import type { AccountRole } from '@/lib/auth/roles';
 import { presenceLabel, summarize } from '@/lib/presence';
-import {
-  PRESENCE_DOT_CLASS,
-  PresenceDot,
-} from '@/components/presence/presence-dot';
 import { InviteMemberDialog } from './invite-member-dialog';
-import { SettingsPanelHead } from './settings-panel-head';
 import { ROLE_META } from './role-meta';
+import { SettingsPanelHead } from './settings-panel-head';
 
 interface Member {
   user_id: string;
@@ -94,11 +60,7 @@ interface Invitation {
 }
 
 // These roles are translated via `useTranslations("Settings.roles")` where they are used.
-const EDITABLE_ROLES: { value: AccountRole }[] = [
-  { value: 'admin' },
-  { value: 'agent' },
-  { value: 'viewer' },
-];
+const EDITABLE_ROLES: { value: AccountRole }[] = [{ value: 'admin' }, { value: 'agent' }, { value: 'viewer' }];
 
 // Per-role chip metadata (icon / label / colour) lives in the shared
 // ROLE_META module so this roster and the Overview identity chip can't
@@ -136,17 +98,13 @@ export function MembersTab() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [removingMember, setRemovingMember] = useState<Member | null>(null);
-  const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(
-    null,
-  );
+  const [pendingMemberAction, setPendingMemberAction] = useState<string | null>(null);
 
   const loadEverything = useCallback(async () => {
     try {
       const [mres, ires] = await Promise.all([
         fetch('/api/account/members', { cache: 'no-store' }),
-        canManageMembers
-          ? fetch('/api/account/invitations', { cache: 'no-store' })
-          : Promise.resolve(null),
+        canManageMembers ? fetch('/api/account/invitations', { cache: 'no-store' }) : Promise.resolve(null),
       ]);
 
       if (!mres.ok) {
@@ -187,11 +145,7 @@ export function MembersTab() {
     // the dropdown doesn't lie about the persisted state.
     const previousRole = member.role;
     setPendingMemberAction(member.user_id);
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.user_id === member.user_id ? { ...m, role: nextRole } : m,
-      ),
-    );
+    setMembers((prev) => prev.map((m) => (m.user_id === member.user_id ? { ...m, role: nextRole } : m)));
     try {
       const res = await fetch(`/api/account/members/${member.user_id}`, {
         method: 'PATCH',
@@ -204,11 +158,7 @@ export function MembersTab() {
         // forever, so the next interaction operated on a wrong
         // baseline (re-trying the same change would no-op via the
         // `member.role === nextRole` guard at the top).
-        setMembers((prev) =>
-          prev.map((m) =>
-            m.user_id === member.user_id ? { ...m, role: previousRole } : m,
-          ),
-        );
+        setMembers((prev) => prev.map((m) => (m.user_id === member.user_id ? { ...m, role: previousRole } : m)));
         const payload = await res.json().catch(() => ({}));
         toast.error(payload.error || 'Failed to update role');
         return;
@@ -216,11 +166,7 @@ export function MembersTab() {
       toast.success(t('updatedToast', { name: member.full_name || t('unnamed'), role: tRoles(nextRole) }));
     } catch (err) {
       // Same revert on network failure.
-      setMembers((prev) =>
-        prev.map((m) =>
-          m.user_id === member.user_id ? { ...m, role: previousRole } : m,
-        ),
-      );
+      setMembers((prev) => prev.map((m) => (m.user_id === member.user_id ? { ...m, role: previousRole } : m)));
       console.error('[MembersTab] role change error:', err);
       toast.error('Could not reach the server');
     } finally {
@@ -232,19 +178,14 @@ export function MembersTab() {
     if (!removingMember) return;
     setPendingMemberAction(removingMember.user_id);
     try {
-      const res = await fetch(
-        `/api/account/members/${removingMember.user_id}`,
-        { method: 'DELETE' },
-      );
+      const res = await fetch(`/api/account/members/${removingMember.user_id}`, { method: 'DELETE' });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
         toast.error(payload.error || 'Failed to remove member');
         return;
       }
       toast.success(t('removedToast', { name: removingMember.full_name || t('unnamed') }));
-      setMembers((prev) =>
-        prev.filter((m) => m.user_id !== removingMember.user_id),
-      );
+      setMembers((prev) => prev.filter((m) => m.user_id !== removingMember.user_id));
       setRemovingMember(null);
     } catch (err) {
       console.error('[MembersTab] remove error:', err);
@@ -281,7 +222,7 @@ export function MembersTab() {
   }
 
   return (
-    <section className="animate-in fade-in-50 space-y-6 duration-200">
+    <section className="fade-in-50 animate-in space-y-6 duration-200">
       <SettingsPanelHead
         title={t('title')}
         description={t('description')}
@@ -301,7 +242,7 @@ export function MembersTab() {
         (() => {
           const counts = summarize(members.map((m) => getPresence(m.user_id)));
           return (
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground text-xs">
               <span className="inline-flex items-center gap-1.5">
                 <PresenceDot status="online" />
                 {counts.online} {t('online')}
@@ -314,9 +255,7 @@ export function MembersTab() {
                 <PresenceDot status="offline" />
                 {counts.offline} {t('offline')}
               </span>
-              <span className="text-muted-foreground/70">
-                · {t('memberCount', { count: members.length })}
-              </span>
+              <span className="text-muted-foreground/70">· {t('memberCount', { count: members.length })}</span>
             </div>
           );
         })()}
@@ -333,11 +272,7 @@ export function MembersTab() {
               const isBusy = pendingMemberAction === member.user_id;
               const presence = getPresence(member.user_id);
               const presenceRow = getRow(member.user_id);
-              const presenceText = presenceLabel(
-                presence,
-                presenceRow?.last_seen_at ?? null,
-                now,
-              );
+              const presenceText = presenceLabel(presence, presenceRow?.last_seen_at ?? null, now);
 
               return (
                 <li
@@ -354,26 +289,15 @@ export function MembersTab() {
                       <TooltipTrigger
                         render={
                           <Avatar className="size-9 shrink-0">
-                            {member.avatar_url ? (
-                              <AvatarImage
-                                src={member.avatar_url}
-                                alt={member.full_name || 'Member'}
-                              />
-                            ) : null}
-                            <AvatarFallback className="bg-primary/10 text-sm font-medium text-primary">
-                              {(member.full_name || member.email || 'U')
-                                .charAt(0)
-                                .toUpperCase()}
+                            {member.avatar_url ? <AvatarImage src={member.avatar_url} alt={member.full_name || 'Member'} /> : null}
+                            <AvatarFallback className="bg-primary/10 font-medium text-primary text-sm">
+                              {(member.full_name || member.email || 'U').charAt(0).toUpperCase()}
                             </AvatarFallback>
                             {/* role+label so screen readers announce
                                 presence — the hover tooltip alone isn't
                                 reachable by keyboard/AT on a non-focusable
                                 avatar. */}
-                            <AvatarBadge
-                              role="img"
-                              aria-label={presenceText}
-                              className={PRESENCE_DOT_CLASS[presence]}
-                            />
+                            <AvatarBadge role="img" aria-label={presenceText} className={PRESENCE_DOT_CLASS[presence]} />
                           </Avatar>
                         }
                       />
@@ -382,26 +306,20 @@ export function MembersTab() {
 
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium text-foreground">
-                          {member.full_name || t('unnamed')}
-                        </span>
+                        <span className="truncate font-medium text-foreground text-sm">{member.full_name || t('unnamed')}</span>
                         {isSelf && (
-                          <Badge className="bg-muted text-muted-foreground border-border text-[10px] uppercase tracking-wide">
+                          <Badge className="border-border bg-muted text-[10px] text-muted-foreground uppercase tracking-wide">
                             {t('you')}
                           </Badge>
                         )}
                       </div>
-                      {member.email && (
-                        <p className="truncate text-xs text-muted-foreground">
-                          {member.email}
-                        </p>
-                      )}
+                      {member.email && <p className="truncate text-muted-foreground text-xs">{member.email}</p>}
                     </div>
                   </div>
 
                   {/* Joined date stays desktop-only. The mobile row's
                       vertical density makes the joined date noise. */}
-                  <div className="hidden sm:block text-right text-xs text-muted-foreground">
+                  <div className="hidden text-right text-muted-foreground text-xs sm:block">
                     {t('joined', { date: fmtDate(member.joined_at) })}
                   </div>
 
@@ -424,10 +342,7 @@ export function MembersTab() {
                           v && handleRoleChange(member, v as AccountRole)
                         }
                       >
-                        <SelectTrigger
-                          className="w-32 bg-muted border-border text-foreground"
-                          disabled={isBusy}
-                        >
+                        <SelectTrigger className="w-32 border-border bg-muted text-foreground" disabled={isBusy}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -440,7 +355,7 @@ export function MembersTab() {
                       </Select>
                     ) : (
                       <span
-                        className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium ${roleMeta.className}`}
+                        className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-medium text-xs ${roleMeta.className}`}
                       >
                         <RoleIcon className="size-3.5" />
                         {tRoles(member.role)}
@@ -460,7 +375,7 @@ export function MembersTab() {
                         size="sm"
                         onClick={() => setRemovingMember(member)}
                         disabled={isBusy}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
+                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -478,32 +393,22 @@ export function MembersTab() {
         <div>
           <div className="mb-2 flex items-center gap-2">
             <UsersRound className="size-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold text-foreground">
-              {t('pendingInvitations')}
-            </h3>
-            <Badge className="bg-muted text-muted-foreground border-border">
-              {invitations.length}
-            </Badge>
+            <h3 className="font-semibold text-foreground text-sm">{t('pendingInvitations')}</h3>
+            <Badge className="border-border bg-muted text-muted-foreground">{invitations.length}</Badge>
           </div>
           {/* P10 — make the no-resend design explicit. Admins were
               confused why the pending list shows roles + expiry but
               no "copy link again" button. Stating the constraint up
               front (rather than letting the user discover it by
               looking for a button) keeps it from feeling like a bug. */}
-          {invitations.length > 0 ? (
-            <p className="mb-3 text-xs text-muted-foreground">
-              {t('inviteHint')}
-            </p>
-          ) : null}
+          {invitations.length > 0 ? <p className="mb-3 text-muted-foreground text-xs">{t('inviteHint')}</p> : null}
 
           {invitations.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
                 <Mail className="size-6 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">
-                  {t('noPendingTitle')}
-                </p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-2 text-muted-foreground text-sm">{t('noPendingTitle')}</p>
+                <p className="mt-1 text-muted-foreground text-xs">
                   {t.rich('noPendingDesc', { bold: (chunks) => <strong>{chunks}</strong> })}
                 </p>
               </CardContent>
@@ -516,41 +421,36 @@ export function MembersTab() {
                     const inviteRoleMeta = ROLE_META[inv.role];
                     const InviteRoleIcon = inviteRoleMeta.icon;
                     return (
-                    <li
-                      key={inv.id}
-                      className="flex items-center gap-4 px-4 py-3"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">
-                            {inv.label || t('untitledInvite')}
-                          </span>
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-medium ${inviteRoleMeta.className}`}
-                          >
-                            <InviteRoleIcon className="size-3" />
-                            {tRoles(inv.role)}
-                          </span>
+                      <li key={inv.id} className="flex items-center gap-4 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-foreground text-sm">{inv.label || t('untitledInvite')}</span>
+                            <span
+                              className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-medium text-[11px] ${inviteRoleMeta.className}`}
+                            >
+                              <InviteRoleIcon className="size-3" />
+                              {tRoles(inv.role)}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-muted-foreground text-xs">
+                            {t('created', { date: fmtDate(inv.created_at) })} · {fmtExpiresIn(inv.expires_at, t)}
+                          </p>
                         </div>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {t('created', { date: fmtDate(inv.created_at) })} · {fmtExpiresIn(inv.expires_at, t)}
-                        </p>
-                      </div>
 
-                      {/* Revoke: red default state, mirrors the
+                        {/* Revoke: red default state, mirrors the
                           members-tab Remove button. Pre-polish version
                           read as a neutral secondary button until
                           hover. */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRevoke(inv)}
-                        className="border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 hover:border-red-500/60 hover:text-red-200"
-                      >
-                        <MailX className="size-4" />
-                        {t('revoke')}
-                      </Button>
-                    </li>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRevoke(inv)}
+                          className="border-red-500/40 bg-red-500/10 text-red-300 hover:border-red-500/60 hover:bg-red-500/20 hover:text-red-200"
+                        >
+                          <MailX className="size-4" />
+                          {t('revoke')}
+                        </Button>
+                      </li>
                     );
                   })}
                 </ul>
@@ -560,11 +460,7 @@ export function MembersTab() {
         </div>
       </RequireRole>
 
-      <InviteMemberDialog
-        open={inviteOpen}
-        onOpenChange={setInviteOpen}
-        onCreated={loadEverything}
-      />
+      <InviteMemberDialog open={inviteOpen} onOpenChange={setInviteOpen} onCreated={loadEverything} />
 
       <Dialog
         open={removingMember !== null}
@@ -572,20 +468,20 @@ export function MembersTab() {
           if (!open) setRemovingMember(null);
         }}
       >
-        <DialogContent className="bg-popover border-border sm:max-w-sm">
+        <DialogContent className="border-border bg-popover sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-popover-foreground">
               <AlertTriangle className="size-4 text-amber-400" />
               {t('removeDialogTitle')}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground">
-              {t.rich('removeDialogDesc', { 
+              {t.rich('removeDialogDesc', {
                 name: removingMember?.full_name || t('unnamed'),
-                bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>
+                bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
               })}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="bg-popover border-border">
+          <DialogFooter className="border-border bg-popover">
             <Button
               variant="outline"
               onClick={() => setRemovingMember(null)}
@@ -593,11 +489,7 @@ export function MembersTab() {
             >
               {t('cancel')}
             </Button>
-            <Button
-              onClick={handleRemove}
-              disabled={!!pendingMemberAction}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
+            <Button onClick={handleRemove} disabled={!!pendingMemberAction} className="bg-red-600 text-white hover:bg-red-700">
               {pendingMemberAction ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

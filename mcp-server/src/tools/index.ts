@@ -7,9 +7,9 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WacrmClient } from '../client.js';
 import type { Config } from '../config.js';
+import { registerBroadcastTools } from './broadcast.js';
 import { registerReadTools } from './read.js';
 import { registerWriteTools } from './write.js';
-import { registerBroadcastTools } from './broadcast.js';
 
 export function registerTools(server: McpServer, client: WacrmClient, config: Config): string[] {
   const enabled: string[] = ['read'];

@@ -1,4 +1,4 @@
-import type { Conversation, Contact, Tag } from "@/types";
+import type { Contact, Conversation, Tag } from '@/types';
 
 /**
  * Conversation select that embeds the contact plus its tags, so the Inbox
@@ -6,12 +6,11 @@ import type { Conversation, Contact, Tag } from "@/types";
  * `contact_tags(tags(*))` returns the join rows; {@link normalizeConversation}
  * flattens them onto `contact.tags`.
  */
-export const CONVERSATION_SELECT =
-  "*, contact:contacts(*, contact_tags(tags(*)))";
+export const CONVERSATION_SELECT = '*, contact:contacts(*, contact_tags(tags(*)))';
 
 /** Raw shape returned by {@link CONVERSATION_SELECT} before flattening. */
 type RawContact = Contact & { contact_tags?: { tags: Tag | null }[] };
-type RawConversation = Omit<Conversation, "contact"> & {
+type RawConversation = Omit<Conversation, 'contact'> & {
   contact?: RawContact | null;
 };
 
@@ -29,16 +28,12 @@ export function normalizeConversation(raw: RawConversation): Conversation {
     ...raw,
     contact: {
       ...contact,
-      tags: (contact_tags ?? [])
-        .map((ct) => ct.tags)
-        .filter((t): t is Tag => t != null),
+      tags: (contact_tags ?? []).map((ct) => ct.tags).filter((t): t is Tag => t != null),
     },
   };
 }
 
-export function normalizeConversations(
-  rows: RawConversation[],
-): Conversation[] {
+export function normalizeConversations(rows: RawConversation[]): Conversation[] {
   return rows.map(normalizeConversation);
 }
 
@@ -54,10 +49,7 @@ export interface ContactFilters {
  * Empty `tagIds` and null `company` are no-ops, so the default (no filters)
  * always matches. Tags use OR logic, consistent with Broadcast audiences.
  */
-export function matchesContactFilters(
-  conversation: Conversation,
-  { tagIds, company }: ContactFilters,
-): boolean {
+export function matchesContactFilters(conversation: Conversation, { tagIds, company }: ContactFilters): boolean {
   if (tagIds.length > 0) {
     const contactTagIds = conversation.contact?.tags ?? [];
     if (!contactTagIds.some((t) => tagIds.includes(t.id))) return false;

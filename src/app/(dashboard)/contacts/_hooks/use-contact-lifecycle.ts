@@ -1,11 +1,10 @@
-"use client";
+'use client';
 
-import { useCallback } from "react";
-import { toast } from "sonner";
-import { useTranslations } from "next-intl";
-
-import type { ContactWithTags } from "./use-contacts";
-import { updateContactLifecycle } from "../_actions/actions";
+import { useTranslations } from 'next-intl';
+import { useCallback } from 'react';
+import { toast } from 'sonner';
+import { updateContactLifecycle } from '../_actions/actions';
+import type { ContactWithTags } from './use-contacts';
 
 interface UseContactLifecycleParams {
   contacts: ContactWithTags[];
@@ -20,42 +19,34 @@ export function useContactLifecycle({
   restoreDisplayedContacts,
   clearSelectedContacts,
 }: UseContactLifecycleParams) {
-  const t = useTranslations("Contacts.page");
+  const t = useTranslations('Contacts.page');
 
   return useCallback(
-    async (action: "archive" | "restore", contactIds: string[]) => {
+    async (action: 'archive' | 'restore', contactIds: string[]) => {
       const visibleIds = new Set(contacts.map((contact) => contact.id));
       const visibleContactIds = contactIds.filter((id) => visibleIds.has(id));
       if (visibleContactIds.length === 0) return;
 
-      const contactsBeingUpdated = contacts.filter((contact) =>
-        visibleContactIds.includes(contact.id),
-      );
+      const contactsBeingUpdated = contacts.filter((contact) => visibleContactIds.includes(contact.id));
 
       removeDisplayedContacts(contactsBeingUpdated);
       clearSelectedContacts();
 
-      const lifecycleUpdate = await updateContactLifecycle(
-        action,
-        visibleContactIds,
-      );
+      const lifecycleUpdate = await updateContactLifecycle(action, visibleContactIds);
       if (!lifecycleUpdate.ok) {
         restoreDisplayedContacts(contactsBeingUpdated);
-        toast.error(t("toastLifecycleFailed"));
+        toast.error(t('toastLifecycleFailed'));
         return;
       }
 
-      if (action === "archive") {
-        toast.success(t("toastArchived", { count: visibleContactIds.length }), {
+      if (action === 'archive') {
+        toast.success(t('toastArchived', { count: visibleContactIds.length }), {
           action: {
-            label: t("undo"),
+            label: t('undo'),
             onClick: async () => {
-              const lifecycleRestore = await updateContactLifecycle(
-                "restore",
-                visibleContactIds,
-              );
+              const lifecycleRestore = await updateContactLifecycle('restore', visibleContactIds);
               if (!lifecycleRestore.ok) {
-                toast.error(t("toastLifecycleFailed"));
+                toast.error(t('toastLifecycleFailed'));
                 return;
               }
               restoreDisplayedContacts(contactsBeingUpdated);
@@ -63,15 +54,9 @@ export function useContactLifecycle({
           },
         });
       } else {
-        toast.success(t("toastRestored", { count: visibleContactIds.length }));
+        toast.success(t('toastRestored', { count: visibleContactIds.length }));
       }
     },
-    [
-      contacts,
-      removeDisplayedContacts,
-      restoreDisplayedContacts,
-      clearSelectedContacts,
-      t,
-    ],
+    [contacts, removeDisplayedContacts, restoreDisplayedContacts, clearSelectedContacts, t]
   );
 }

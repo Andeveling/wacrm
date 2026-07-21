@@ -1,33 +1,31 @@
-"use client";
+'use client';
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { useTranslations } from "next-intl";
+import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
-import { createClient } from "@/lib/supabase/client";
-import type { Contact, Tag } from "@/types";
+import { createClient } from '@/lib/supabase/client';
+import type { Contact, Tag } from '@/types';
 
 export const PAGE_SIZE = 25;
 
 export type ContactWithTags = Contact & { tags?: Tag[] };
-export type ContactStatus = "active" | "archived";
+export type ContactStatus = 'active' | 'archived';
 
 interface UseContactsOptions {
   onContactsWillRefresh?: () => void;
 }
 
-export function useContacts({
-  onContactsWillRefresh,
-}: UseContactsOptions = {}) {
+export function useContacts({ onContactsWillRefresh }: UseContactsOptions = {}) {
   const supabase = createClient();
-  const t = useTranslations("Contacts.page");
+  const t = useTranslations('Contacts.page');
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [status, setStatus] = useState<ContactStatus>("active");
+  const [status, setStatus] = useState<ContactStatus>('active');
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [tagsById, setTagsById] = useState<Record<string, Tag>>({});
 
@@ -36,7 +34,7 @@ export function useContacts({
   onContactsWillRefreshRef.current = onContactsWillRefresh;
 
   const loadTags = useCallback(async () => {
-    const { data } = await supabase.from("tags").select("*");
+    const { data } = await supabase.from('tags').select('*');
     if (!data) return;
     const tagsById: Record<string, Tag> = {};
     data.forEach((row) => {
@@ -66,7 +64,7 @@ export function useContacts({
       // windowed total count + pagination) so a tag covering many
       // contacts can't silently truncate the result or overflow an IN
       // clause. See migration 025_filter_contacts_by_tags.
-      const { data, error } = await supabase.rpc("filter_contacts_by_tags", {
+      const { data, error } = await supabase.rpc('filter_contacts_by_tags', {
         p_tag_ids: selectedTagIds,
         p_search: searchTerm || null,
         p_limit: PAGE_SIZE,
@@ -75,7 +73,7 @@ export function useContacts({
       });
       if (requestId !== latestRequestId.current) return;
       if (error) {
-        toast.error(t("toastFailedLoad"));
+        toast.error(t('toastFailedLoad'));
         setLoading(false);
         return;
       }
@@ -84,33 +82,25 @@ export function useContacts({
         total_count: number;
       }[];
       matchingContacts = filteredContacts.map((row) => row.contact);
-      totalMatchingContacts =
-        filteredContacts.length > 0
-          ? Number(filteredContacts[0].total_count)
-          : 0;
+      totalMatchingContacts = filteredContacts.length > 0 ? Number(filteredContacts[0].total_count) : 0;
     } else {
       let query = supabase
-        .from("contacts")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
+        .from('contacts')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
         .range(firstContactIndex, lastContactIndex);
 
-      query =
-        status === "active"
-          ? query.is("archived_at", null)
-          : query.not("archived_at", "is", null);
+      query = status === 'active' ? query.is('archived_at', null) : query.not('archived_at', 'is', null);
 
       if (searchTerm) {
         const searchPattern = `%${searchTerm}%`;
-        query = query.or(
-          `name.ilike.${searchPattern},phone.ilike.${searchPattern},email.ilike.${searchPattern}`,
-        );
+        query = query.or(`name.ilike.${searchPattern},phone.ilike.${searchPattern},email.ilike.${searchPattern}`);
       }
 
       const { data, count: exactCount, error } = await query;
       if (requestId !== latestRequestId.current) return;
       if (error) {
-        toast.error(t("toastFailedLoad"));
+        toast.error(t('toastFailedLoad'));
         setLoading(false);
         return;
       }
@@ -127,10 +117,7 @@ export function useContacts({
     }
 
     const contactIds = matchingContacts.map((contact) => contact.id);
-    const { data: contactTags } = await supabase
-      .from("contact_tags")
-      .select("contact_id, tag_id")
-      .in("contact_id", contactIds);
+    const { data: contactTags } = await supabase.from('contact_tags').select('contact_id, tag_id').in('contact_id', contactIds);
     if (requestId !== latestRequestId.current) return;
 
     const tagsByContact: Record<string, string[]> = {};
@@ -143,9 +130,7 @@ export function useContacts({
 
     const contactsWithTags: ContactWithTags[] = matchingContacts.map((contact) => ({
       ...contact,
-      tags: (tagsByContact[contact.id] ?? [])
-        .map((tagId) => tagsById[tagId])
-        .filter(Boolean),
+      tags: (tagsByContact[contact.id] ?? []).map((tagId) => tagsById[tagId]).filter(Boolean),
     }));
 
     setContacts(contactsWithTags);
@@ -185,11 +170,7 @@ export function useContacts({
     },
     selectedTagIds,
     toggleTagFilter: (tagId: string) => {
-      setSelectedTagIds((prev) =>
-        prev.includes(tagId)
-          ? prev.filter((id) => id !== tagId)
-          : [...prev, tagId],
-      );
+      setSelectedTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
       setPage(0);
     },
     clearTagFilters: () => {
@@ -197,9 +178,7 @@ export function useContacts({
       setPage(0);
     },
     tagsById,
-    allTags: Object.values(tagsById).sort((a, b) =>
-      a.name.localeCompare(b.name),
-    ),
+    allTags: Object.values(tagsById).sort((a, b) => a.name.localeCompare(b.name)),
     hasActiveFilters: search.trim().length > 0 || selectedTagIds.length > 0,
     reloadContacts: loadContacts,
     reloadTags: loadTags,
@@ -210,12 +189,7 @@ export function useContacts({
     },
     restoreDisplayedContacts: (rows: ContactWithTags[]) => {
       if (rows.length === 0) return;
-      setContacts((current) =>
-        [...rows, ...current].sort(
-          (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-        ),
-      );
+      setContacts((current) => [...rows, ...current].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
       setTotalCount((count) => count + rows.length);
     },
   };

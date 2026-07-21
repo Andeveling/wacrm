@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/rate-limit';
 import { createClient } from '@/lib/supabase/server';
-import { sendReactionMessage } from '@/lib/whatsapp/meta-api';
 import { decrypt } from '@/lib/whatsapp/encryption';
+import { sendReactionMessage } from '@/lib/whatsapp/meta-api';
 import { sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
-import {
-  checkRateLimit,
-  rateLimitResponse,
-  RATE_LIMITS,
-} from '@/lib/rate-limit';
 
 /**
  * POST /api/whatsapp/react
@@ -38,17 +34,10 @@ export async function POST(request: Request) {
 
     // Resolve the caller's account_id so conversation + whatsapp_config
     // lookups work for teammates who didn't author the rows directly.
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('account_id')
-      .eq('user_id', user.id)
-      .maybeSingle();
+    const { data: profile } = await supabase.from('profiles').select('account_id').eq('user_id', user.id).maybeSingle();
     const accountId = profile?.account_id as string | undefined;
     if (!accountId) {
-      return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
-        { status: 403 },
-      );
+      return NextResponse.json({ error: 'Your profile is not linked to an account.' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -58,10 +47,7 @@ export async function POST(request: Request) {
     };
 
     if (!message_id || typeof emoji !== 'string') {
-      return NextResponse.json(
-        { error: 'message_id and emoji are required' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'message_id and emoji are required' }, { status: 400 });
     }
 
     // Resolve target message + its conversation; verify ownership.
@@ -78,10 +64,7 @@ export async function POST(request: Request) {
     if (!targetMessage.message_id) {
       // No Meta ID yet — usually a sending/failed agent message. We can't
       // tell Meta to react to a message it never received.
-      return NextResponse.json(
-        { error: 'Cannot react to a message that has not been sent to WhatsApp' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Cannot react to a message that has not been sent to WhatsApp' }, { status: 400 });
     }
 
     const { data: conversation, error: convError } = await supabase
@@ -92,29 +75,21 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (convError || !conversation) {
-      return NextResponse.json(
-        { error: 'Conversation not found' },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
     }
 
-    const contact = Array.isArray(conversation.contact)
-      ? conversation.contact[0]
-      : conversation.contact;
+    const contact = Array.isArray(conversation.contact) ? conversation.contact[0] : conversation.contact;
     if (contact?.archived_at) {
       return NextResponse.json(
         {
           code: 'contact_archived',
           error: 'Archived contacts cannot receive reactions',
         },
-        { status: 409 },
+        { status: 409 }
       );
     }
     if (!contact?.phone) {
-      return NextResponse.json(
-        { error: 'Contact phone number not found' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Contact phone number not found' }, { status: 400 });
     }
 
     // WhatsApp config + access token. Account-scoped post-multi-user.
@@ -125,10 +100,7 @@ export async function POST(request: Request) {
       .single();
 
     if (configError || !config) {
-      return NextResponse.json(
-        { error: 'WhatsApp not configured.' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'WhatsApp not configured.' }, { status: 400 });
     }
 
     const accessToken = decrypt(config.access_token);
@@ -143,13 +115,9 @@ export async function POST(request: Request) {
         emoji,
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Unknown Meta API error';
+      const message = err instanceof Error ? err.message : 'Unknown Meta API error';
       console.error('[whatsapp/react] Meta send failed:', message);
-      return NextResponse.json(
-        { error: `Meta API error: ${message}` },
-        { status: 502 },
-      );
+      return NextResponse.json({ error: `Meta API error: ${message}` }, { status: 502 });
     }
 
     // Mirror into DB. Empty emoji = removal.
@@ -163,10 +131,7 @@ export async function POST(request: Request) {
 
       if (delError) {
         console.error('[whatsapp/react] DB delete failed:', delError.message);
-        return NextResponse.json(
-          { error: 'Reaction sent to Meta but DB delete failed' },
-          { status: 500 },
-        );
+        return NextResponse.json({ error: 'Reaction sent to Meta but DB delete failed' }, { status: 500 });
       }
     } else {
       // Upsert. The unique constraint (message_id, actor_type, actor_id)
@@ -179,24 +144,18 @@ export async function POST(request: Request) {
           actor_id: user.id,
           emoji,
         },
-        { onConflict: 'message_id,actor_type,actor_id' },
+        { onConflict: 'message_id,actor_type,actor_id' }
       );
 
       if (upsertError) {
         console.error('[whatsapp/react] DB upsert failed:', upsertError.message);
-        return NextResponse.json(
-          { error: 'Reaction sent to Meta but DB upsert failed' },
-          { status: 500 },
-        );
+        return NextResponse.json({ error: 'Reaction sent to Meta but DB upsert failed' }, { status: 500 });
       }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error in WhatsApp react POST:', error);
-    return NextResponse.json(
-      { error: 'Failed to react to message' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Failed to react to message' }, { status: 500 });
   }
 }

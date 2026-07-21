@@ -14,10 +14,7 @@ export interface TemplateStatusDisplay {
   classes: string;
 }
 
-export const templateStatusConfig: Record<
-  MessageTemplateStatus,
-  TemplateStatusDisplay
-> = {
+export const templateStatusConfig: Record<MessageTemplateStatus, TemplateStatusDisplay> = {
   DRAFT: {
     label: 'Draft',
     classes: 'bg-slate-600/20 text-muted-foreground border-slate-600/30',

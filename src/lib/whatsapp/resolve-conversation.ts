@@ -21,11 +21,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ContactError, resolveAuditUserId } from '@/lib/api/v1/contacts';
 import { isUniqueViolation } from '@/lib/contacts/dedupe';
-import {
-  ContactIdentityError,
-  type ContactIdentityResult,
-  resolveContactIdentity,
-} from '@/lib/contacts/resolve-identity';
+import { ContactIdentityError, type ContactIdentityResult, resolveContactIdentity } from '@/lib/contacts/resolve-identity';
 import { isValidE164, sanitizePhoneForMeta } from '@/lib/whatsapp/phone-utils';
 import { SendMessageError } from '@/lib/whatsapp/send-message';
 
@@ -50,26 +46,14 @@ export async function resolveConversationByPhone(
 ): Promise<ResolvedConversation> {
   const sanitized = sanitizePhoneForMeta(phone);
   if (!isValidE164(sanitized)) {
-    throw new SendMessageError(
-      'bad_request',
-      "'to' must be a valid phone number in E.164 format (e.g. +14155550123)",
-      400
-    );
+    throw new SendMessageError('bad_request', "'to' must be a valid phone number in E.164 format (e.g. +14155550123)", 400);
   }
 
   // Fail fast (and create nothing) when the account has no WhatsApp
   // connected — the same error the send would raise anyway.
-  const { data: config } = await db
-    .from('whatsapp_config')
-    .select('id')
-    .eq('account_id', accountId)
-    .maybeSingle();
+  const { data: config } = await db.from('whatsapp_config').select('id').eq('account_id', accountId).maybeSingle();
   if (!config) {
-    throw new SendMessageError(
-      'whatsapp_not_configured',
-      'WhatsApp not configured. Please set up your WhatsApp integration first.',
-      400
-    );
+    throw new SendMessageError('whatsapp_not_configured', 'WhatsApp not configured. Please set up your WhatsApp integration first.', 400);
   }
 
   // Audit user for created rows = the single account-wide default used
@@ -105,11 +89,7 @@ export async function resolveConversationByPhone(
     throw error;
   }
   if (!identity) {
-    throw new SendMessageError(
-      'contact_archived',
-      'Cannot send messages to an archived contact',
-      409
-    );
+    throw new SendMessageError('contact_archived', 'Cannot send messages to an archived contact', 409);
   }
   const contactId = identity.contact.id;
   const contactCreated = identity.status === 'created';
@@ -120,12 +100,7 @@ export async function resolveConversationByPhone(
   // `.maybeSingle()`, which errors on ≥2 rows: if duplicates predate the
   // unique index (migration 036), we resolve to the canonical survivor
   // instead of falling through and creating yet another (issue #363).
-  const conversationId = await findOrCreateConversationRow(
-    db,
-    accountId,
-    contactId,
-    ownerUserId
-  );
+  const conversationId = await findOrCreateConversationRow(db, accountId, contactId, ownerUserId);
 
   return { conversationId, contactId, contactCreated };
 }
@@ -136,12 +111,7 @@ export async function resolveConversationByPhone(
  * the inbound webhook does: on a 23505 from a concurrent create,
  * re-resolve the winning row rather than failing the send.
  */
-async function findOrCreateConversationRow(
-  db: SupabaseClient,
-  accountId: string,
-  contactId: string,
-  ownerUserId: string
-): Promise<string> {
+async function findOrCreateConversationRow(db: SupabaseClient, accountId: string, contactId: string, ownerUserId: string): Promise<string> {
   const { data: existing, error: findErr } = await db
     .from('conversations')
     .select('id')
@@ -152,11 +122,7 @@ async function findOrCreateConversationRow(
 
   if (findErr) {
     console.error('[resolve-conversation] conversation lookup error:', findErr);
-    throw new SendMessageError(
-      'db_error',
-      'Failed to resolve conversation',
-      500
-    );
+    throw new SendMessageError('db_error', 'Failed to resolve conversation', 500);
   }
 
   if (existing && existing.length > 0) {
@@ -187,11 +153,7 @@ async function findOrCreateConversationRow(
       }
     }
     console.error('[resolve-conversation] conversation create error:', convErr);
-    throw new SendMessageError(
-      'db_error',
-      'Failed to create conversation',
-      500
-    );
+    throw new SendMessageError('db_error', 'Failed to create conversation', 500);
   }
 
   return newConv.id;

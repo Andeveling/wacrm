@@ -1,31 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
-import { addContactTag, deleteContactTag } from '@/lib/contacts/tag-api';
+import { AlertTriangle, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag } from '@/types';
-import {
-  findExistingContact,
-  isExactMatch,
-  isUniqueViolation,
-  type ExistingContact,
-} from '@/lib/contacts/dedupe';
-import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, AlertTriangle } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useAuth } from '@/hooks/use-auth';
+import { type ExistingContact, findExistingContact, isExactMatch, isUniqueViolation } from '@/lib/contacts/dedupe';
+import { resolveContactIdentity } from '@/lib/contacts/resolve-identity';
+import { addContactTag, deleteContactTag } from '@/lib/contacts/tag-api';
+import { createClient } from '@/lib/supabase/client';
+import type { Contact, ContactTag, Tag } from '@/types';
 
 interface ContactFormProps {
   open: boolean;
@@ -38,14 +26,7 @@ interface ContactFormProps {
   onViewExisting?: (contactId: string) => void;
 }
 
-export function ContactForm({
-  open,
-  onOpenChange,
-  contact,
-  contactTags = [],
-  onSaved,
-  onViewExisting,
-}: ContactFormProps) {
+export function ContactForm({ open, onOpenChange, contact, contactTags = [], onSaved, onViewExisting }: ContactFormProps) {
   const t = useTranslations('Contacts.form');
   const supabase = createClient();
   const { accountId } = useAuth();
@@ -62,14 +43,20 @@ export function ContactForm({
   // hard-blocks the save; a fuzzy trunk-variant match only warns. The
   // DB unique index (migration 022) is the real backstop — this is the
   // friendly heads-up before we get there.
-  const [dupMatch, setDupMatch] = useState<
-    { contact: ExistingContact; exact: boolean } | null
-  >(null);
+  const [dupMatch, setDupMatch] = useState<{ contact: ExistingContact; exact: boolean } | null>(null);
   const [checkingDup, setCheckingDup] = useState(false);
 
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [loadingTags, setLoadingTags] = useState(false);
+
+  const fetchTags = useCallback(async () => {
+    setLoadingTags(true);
+    const supabase = createClient();
+    const { data } = await supabase.from('tags').select('*').order('name');
+    if (data) setTags(data);
+    setLoadingTags(false);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -81,7 +68,7 @@ export function ContactForm({
       setDupMatch(null);
       fetchTags();
     }
-  }, [open, contact]);
+  }, [open, contact, fetchTags, contactTags.map]);
 
   // Look up an existing contact with this number (new contacts only).
   // Runs on blur so we don't query on every keystroke.
@@ -95,32 +82,14 @@ export function ContactForm({
     setCheckingDup(true);
     try {
       const existing = await findExistingContact(supabase, accountId, value);
-      setDupMatch(
-        existing
-          ? { contact: existing, exact: isExactMatch(existing, value) }
-          : null,
-      );
+      setDupMatch(existing ? { contact: existing, exact: isExactMatch(existing, value) } : null);
     } finally {
       setCheckingDup(false);
     }
   }
 
-  async function fetchTags() {
-    setLoadingTags(true);
-    const { data } = await supabase
-      .from('tags')
-      .select('*')
-      .order('name');
-    if (data) setTags(data);
-    setLoadingTags(false);
-  }
-
   function toggleTag(tagId: string) {
-    setSelectedTagIds((prev) =>
-      prev.includes(tagId)
-        ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
-    );
+    setSelectedTagIds((prev) => (prev.includes(tagId) ? prev.filter((id) => id !== tagId) : [...prev, tagId]));
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -204,11 +173,7 @@ export function ContactForm({
       if (isUniqueViolation(err)) {
         toast.error(t('toastConflict'));
         if (!isEdit && accountId) {
-          const existing = await findExistingContact(
-            supabase,
-            accountId,
-            phone.trim(),
-          );
+          const existing = await findExistingContact(supabase, accountId, phone.trim());
           if (existing) setDupMatch({ contact: existing, exact: true });
         }
         return;
@@ -222,149 +187,130 @@ export function ContactForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-popover border-border text-popover-foreground sm:max-w-md">
+      <DialogContent className="border-border bg-popover text-popover-foreground sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-popover-foreground">
-            {isEdit ? t('editTitle') : t('addTitle')}
-          </DialogTitle>
-          <DialogDescription className="text-muted-foreground">
-            {isEdit
-              ? t('editDesc')
-              : t('addDesc')}
-          </DialogDescription>
+          <DialogTitle className="text-popover-foreground">{isEdit ? t('editTitle') : t('addTitle')}</DialogTitle>
+          <DialogDescription className="text-muted-foreground">{isEdit ? t('editDesc') : t('addDesc')}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <fieldset disabled={isArchived} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="cf-name" className="text-muted-foreground">
-              {t('nameLabel')}
-            </Label>
-            <Input
-              id="cf-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t('namePlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-name" className="text-muted-foreground">
+                {t('nameLabel')}
+              </Label>
+              <Input
+                id="cf-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder={t('namePlaceholder')}
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-phone" className="text-muted-foreground">
-              {t('phoneLabel')} <span className="text-red-400">*</span>
-            </Label>
-            <Input
-              id="cf-phone"
-              value={phone}
-              onChange={(e) => {
-                setPhone(e.target.value);
-                if (dupMatch) setDupMatch(null);
-              }}
-              onBlur={checkDuplicate}
-              placeholder={t('phonePlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-            {dupMatch ? (
-              <div
-                className={`flex items-start gap-2 rounded-md border px-2.5 py-2 text-xs ${
-                  dupMatch.exact
-                    ? 'border-red-500/40 bg-red-500/10 text-red-300'
-                    : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
-                }`}
-              >
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-                <div className="space-y-1">
-                  <p>
-                    {dupMatch.exact
-                      ? t('dupExact')
-                      : t('dupSimilar')}
-                  </p>
-                  {onViewExisting && (
-                    <button
-                      type="button"
-                      onClick={() => onViewExisting(dupMatch.contact.id)}
-                      className="font-medium underline underline-offset-2 hover:no-underline"
-                    >
-                      {t('viewExisting', { name: dupMatch.contact.name || dupMatch.contact.phone })}
-                    </button>
-                  )}
+            <div className="space-y-2">
+              <Label htmlFor="cf-phone" className="text-muted-foreground">
+                {t('phoneLabel')} <span className="text-red-400">*</span>
+              </Label>
+              <Input
+                id="cf-phone"
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  if (dupMatch) setDupMatch(null);
+                }}
+                onBlur={checkDuplicate}
+                placeholder={t('phonePlaceholder')}
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
+              />
+              {dupMatch ? (
+                <div
+                  className={`flex items-start gap-2 rounded-md border px-2.5 py-2 text-xs ${
+                    dupMatch.exact ? 'border-red-500/40 bg-red-500/10 text-red-300' : 'border-amber-500/40 bg-amber-500/10 text-amber-300'
+                  }`}
+                >
+                  <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+                  <div className="space-y-1">
+                    <p>{dupMatch.exact ? t('dupExact') : t('dupSimilar')}</p>
+                    {onViewExisting && (
+                      <button
+                        type="button"
+                        onClick={() => onViewExisting(dupMatch.contact.id)}
+                        className="font-medium underline underline-offset-2 hover:no-underline"
+                      >
+                        {t('viewExisting', { name: dupMatch.contact.name || dupMatch.contact.phone })}
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <p className="text-xs text-muted-foreground">
-                {t('phoneHint')}
-              </p>
-            )}
-          </div>
+              ) : (
+                <p className="text-muted-foreground text-xs">{t('phoneHint')}</p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-email" className="text-muted-foreground">
-              {t('emailLabel')}
-            </Label>
-            <Input
-              id="cf-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder={t('emailPlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-email" className="text-muted-foreground">
+                {t('emailLabel')}
+              </Label>
+              <Input
+                id="cf-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('emailPlaceholder')}
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="cf-company" className="text-muted-foreground">
-              {t('companyLabel')}
-            </Label>
-            <Input
-              id="cf-company"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder={t('companyPlaceholder')}
-              className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="cf-company" className="text-muted-foreground">
+                {t('companyLabel')}
+              </Label>
+              <Input
+                id="cf-company"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                placeholder={t('companyPlaceholder')}
+                className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label className="text-muted-foreground">{t('tagsLabel')}</Label>
-            {loadingTags ? (
-              <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                <Loader2 className="size-3 animate-spin" />
-                {t('loadingTags')}
-              </div>
-            ) : tags.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                {t('noTagsAvailable')}
-              </p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map((tag) => {
-                  const selected = selectedTagIds.includes(tag.id);
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => toggleTag(tag.id)}
-                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer ${
-                        selected
-                          ? 'ring-2 ring-primary ring-offset-1 ring-offset-border'
-                          : 'opacity-60 hover:opacity-100'
-                      }`}
-                      style={{
-                        backgroundColor: tag.color + '20',
-                        color: tag.color,
-                        borderColor: tag.color,
-                      }}
-                    >
-                      {tag.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
+            <div className="space-y-2">
+              <Label className="text-muted-foreground">{t('tagsLabel')}</Label>
+              {loadingTags ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="size-3 animate-spin" />
+                  {t('loadingTags')}
+                </div>
+              ) : tags.length === 0 ? (
+                <p className="text-muted-foreground text-xs">{t('noTagsAvailable')}</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {tags.map((tag) => {
+                    const selected = selectedTagIds.includes(tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag.id)}
+                        className={`inline-flex cursor-pointer items-center rounded-full px-2.5 py-0.5 font-medium text-xs transition-colors ${
+                          selected ? 'ring-2 ring-primary ring-offset-1 ring-offset-border' : 'opacity-60 hover:opacity-100'
+                        }`}
+                        style={{
+                          backgroundColor: `${tag.color}20`,
+                          color: tag.color,
+                          borderColor: tag.color,
+                        }}
+                      >
+                        {tag.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </fieldset>
-          <DialogFooter className="bg-popover border-border">
+          <DialogFooter className="border-border bg-popover">
             <Button
               type="button"
               variant="outline"
@@ -376,7 +322,7 @@ export function ContactForm({
             <Button
               type="submit"
               disabled={isArchived || saving || checkingDup || (!isEdit && !!dupMatch?.exact)}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {saving && <Loader2 className="size-4 animate-spin" />}
               {isEdit ? t('update') : t('create')}

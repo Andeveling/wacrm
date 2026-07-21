@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { MessageTemplate } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Loader2, FileText, ArrowRight } from 'lucide-react';
+import { ArrowRight, FileText, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { createClient } from '@/lib/supabase/client';
+import type { MessageTemplate } from '@/types';
 
 const categoryColors: Record<string, string> = {
   Marketing: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
@@ -49,7 +49,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
     }
 
     fetchTemplates();
-  }, []);
+  }, [t]);
 
   if (loading) {
     return (
@@ -62,7 +62,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   if (error) {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-2">
-        <p className="text-sm text-red-400">{error}</p>
+        <p className="text-red-400 text-sm">{error}</p>
       </div>
     );
   }
@@ -70,17 +70,15 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold text-foreground">{t('chooseTemplate.title')}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('chooseTemplate.subtitle')}
-        </p>
+        <h2 className="font-semibold text-foreground text-lg">{t('chooseTemplate.title')}</h2>
+        <p className="mt-1 text-muted-foreground text-sm">{t('chooseTemplate.subtitle')}</p>
       </div>
 
       {templates.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-border bg-card/50">
           <FileText className="mb-2 h-8 w-8 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">{t('chooseTemplate.noTemplates')}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{t('chooseTemplate.createFirst')}</p>
+          <p className="text-muted-foreground text-sm">{t('chooseTemplate.noTemplates')}</p>
+          <p className="mt-1 text-muted-foreground text-xs">{t('chooseTemplate.createFirst')}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -91,6 +89,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
             return (
               <button
                 key={template.id}
+                type="button"
                 onClick={() => onSelect(template)}
                 className={`flex flex-col gap-3 rounded-xl border p-4 text-left transition-all ${
                   isSelected
@@ -99,14 +98,12 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
                 }`}
               >
                 <div className="flex items-start justify-between">
-                  <h3 className="text-sm font-medium text-foreground">{template.name}</h3>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${catColor}`}
-                  >
+                  <h3 className="font-medium text-foreground text-sm">{template.name}</h3>
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium text-[10px] ${catColor}`}>
                     {template.category}
                   </span>
                 </div>
-                <p className="line-clamp-3 text-xs text-muted-foreground">{template.body_text}</p>
+                <p className="line-clamp-3 text-muted-foreground text-xs">{template.body_text}</p>
                 <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                   <span>{template.language ?? 'en_US'}</span>
                   {/* Status is omitted on purpose — every template
@@ -119,7 +116,7 @@ export function Step1ChooseTemplate({ selectedTemplate, onSelect, onNext, onBack
         </div>
       )}
 
-      <div className="flex items-center justify-between border-t border-border pt-4">
+      <div className="flex items-center justify-between border-border border-t pt-4">
         <Button variant="outline" onClick={onBack} className="border-border text-muted-foreground">
           {t('back')}
         </Button>

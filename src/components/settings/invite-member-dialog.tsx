@@ -14,29 +14,15 @@
 // shouts this in copy.
 // ============================================================
 
+import { Copy, Loader2, MessageCircle, Sparkles } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Copy, Loader2, MessageCircle, Sparkles } from 'lucide-react';
-
 import { Button, buttonVariants } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { useTranslations } from 'next-intl';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/use-auth';
 
 type InviteRole = 'admin' | 'agent' | 'viewer';
@@ -69,11 +55,7 @@ interface CreatedInvite {
   accountName: string;
 }
 
-export function InviteMemberDialog({
-  open,
-  onOpenChange,
-  onCreated,
-}: InviteMemberDialogProps) {
+export function InviteMemberDialog({ open, onOpenChange, onCreated }: InviteMemberDialogProps) {
   const t = useTranslations('Settings.invite');
   const tRoles = useTranslations('Settings.roles');
   const { account } = useAuth();
@@ -180,7 +162,7 @@ export function InviteMemberDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="bg-popover border-border sm:max-w-md">
+      <DialogContent className="border-border bg-popover sm:max-w-md">
         {result ? (
           <>
             <DialogHeader>
@@ -192,7 +174,7 @@ export function InviteMemberDialog({
                 {t.rich('inviteCreatedDesc', {
                   role: tRoles(result.role),
                   days: result.expiresInDays,
-                  bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>
+                  bold: (chunks: React.ReactNode) => <strong>{chunks}</strong>,
                 })}
               </DialogDescription>
             </DialogHeader>
@@ -203,14 +185,10 @@ export function InviteMemberDialog({
                 <Input
                   readOnly
                   value={result.url}
-                  className="bg-muted border-border text-foreground font-mono text-xs"
+                  className="border-border bg-muted font-mono text-foreground text-xs"
                   onFocus={(e) => e.currentTarget.select()}
                 />
-                <Button
-                  type="button"
-                  onClick={copyToClipboard}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground shrink-0"
-                >
+                <Button type="button" onClick={copyToClipboard} className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90">
                   <Copy className="size-4" />
                   {t('copy')}
                 </Button>
@@ -221,11 +199,8 @@ export function InviteMemberDialog({
                   text (target ratio 7:1). Border bumped to /50, bg to
                   /15, foreground promoted to amber-100 for the strong
                   intro, amber-200 for the body. */}
-              <div className="rounded-md border border-amber-500/50 bg-amber-500/15 px-3 py-2 text-xs text-amber-200">
-                <strong className="font-semibold text-amber-100">
-                  {t('saveLinkNow')}
-                </strong>{' '}
-                {t('saveLinkHint')}
+              <div className="rounded-md border border-amber-500/50 bg-amber-500/15 px-3 py-2 text-amber-200 text-xs">
+                <strong className="font-semibold text-amber-100">{t('saveLinkNow')}</strong> {t('saveLinkHint')}
               </div>
 
               {/* Anchor styled with `buttonVariants` rather than wrapping
@@ -239,8 +214,7 @@ export function InviteMemberDialog({
                 rel="noreferrer noopener"
                 className={buttonVariants({
                   variant: 'outline',
-                  className:
-                    'w-full border-border text-muted-foreground hover:bg-muted',
+                  className: 'w-full border-border text-muted-foreground hover:bg-muted',
                 })}
               >
                 <MessageCircle className="size-4" />
@@ -248,11 +222,8 @@ export function InviteMemberDialog({
               </a>
             </div>
 
-            <DialogFooter className="bg-popover border-border">
-              <Button
-                onClick={() => onOpenChange(false)}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
+            <DialogFooter className="border-border bg-popover">
+              <Button onClick={() => onOpenChange(false)} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {t('done')}
               </Button>
             </DialogFooter>
@@ -261,19 +232,14 @@ export function InviteMemberDialog({
           <>
             <DialogHeader>
               <DialogTitle className="text-popover-foreground">{t('dialogTitle')}</DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                {t('dialogDesc')}
-              </DialogDescription>
+              <DialogDescription className="text-muted-foreground">{t('dialogDesc')}</DialogDescription>
             </DialogHeader>
 
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label className="text-muted-foreground">{t('roleLabel')}</Label>
-                <Select
-                  value={role}
-                  onValueChange={(v) => v && setRole(v as InviteRole)}
-                >
-                  <SelectTrigger className="w-full bg-muted border-border text-foreground">
+                <Select value={role} onValueChange={(v) => v && setRole(v as InviteRole)}>
+                  <SelectTrigger className="w-full border-border bg-muted text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -282,18 +248,13 @@ export function InviteMemberDialog({
                     <SelectItem value="viewer">{tRoles('viewer')}</SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  {tRoles(`${role}Hint` as 'adminHint' | 'agentHint' | 'viewerHint')}
-                </p>
+                <p className="text-muted-foreground text-xs">{tRoles(`${role}Hint` as 'adminHint' | 'agentHint' | 'viewerHint')}</p>
               </div>
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground">{t('validForLabel')}</Label>
-                <Select
-                  value={expiry}
-                  onValueChange={(v) => v && setExpiry(v)}
-                >
-                  <SelectTrigger className="w-full bg-muted border-border text-foreground">
+                <Select value={expiry} onValueChange={(v) => v && setExpiry(v)}>
+                  <SelectTrigger className="w-full border-border bg-muted text-foreground">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -308,35 +269,24 @@ export function InviteMemberDialog({
 
               <div className="space-y-2">
                 <Label className="text-muted-foreground">
-                  {t('labelTitle')}{' '}
-                  <span className="text-xs text-muted-foreground">{t('optional')}</span>
+                  {t('labelTitle')} <span className="text-muted-foreground text-xs">{t('optional')}</span>
                 </Label>
                 <Input
                   placeholder={t('labelPlaceholder')}
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
                   maxLength={MAX_LABEL_LEN}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                  className="border-border bg-muted text-foreground placeholder:text-muted-foreground"
                 />
-                <p className="text-xs text-muted-foreground">
-                  {t('labelHint')}
-                </p>
+                <p className="text-muted-foreground text-xs">{t('labelHint')}</p>
               </div>
             </div>
 
-            <DialogFooter className="bg-popover border-border">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                className="border-border text-muted-foreground hover:bg-muted"
-              >
+            <DialogFooter className="border-border bg-popover">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="border-border text-muted-foreground hover:bg-muted">
                 {t('cancel')}
               </Button>
-              <Button
-                onClick={handleCreate}
-                disabled={submitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              >
+              <Button onClick={handleCreate} disabled={submitting} className="bg-primary text-primary-foreground hover:bg-primary/90">
                 {submitting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />

@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
-import { useAuth } from "@/hooks/use-auth";
-import { hasMinRole, type AccountRole } from "@/lib/auth/roles";
+import { useAuth } from '@/hooks/use-auth';
+import { type AccountRole, hasMinRole } from '@/lib/auth/roles';
 
 interface RequireRoleProps {
   /** Minimum role to render `children`. Uses the standard hierarchy
@@ -32,11 +32,7 @@ interface RequireRoleProps {
  * Mirrors the server-side `requireRole(min)` from `@/lib/auth/account`
  * so client and server gates stay aligned by construction.
  */
-export function RequireRole({
-  min,
-  fallback = null,
-  children,
-}: RequireRoleProps) {
+export function RequireRole({ min, fallback = null, children }: RequireRoleProps) {
   const { profileLoading, accountRole } = useAuth();
 
   if (profileLoading) return <>{fallback}</>;

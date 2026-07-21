@@ -7,8 +7,8 @@
 // right scope returns a clean `forbidden` error.)
 // ============================================================
 
-import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { z } from 'zod';
 import type { WacrmClient } from '../client.js';
 import { handle, jsonResult } from './shared.js';
 
@@ -16,10 +16,7 @@ const templateSchema = z
   .object({
     name: z.string().describe('Meta-approved template name.'),
     language: z.string().describe('Template language code, e.g. "en_US".'),
-    params: z
-      .array(z.string())
-      .optional()
-      .describe('Positional body variables, in order.'),
+    params: z.array(z.string()).optional().describe('Positional body variables, in order.'),
   })
   .describe('Template payload — required when type is "template".');
 
@@ -36,25 +33,15 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
           .enum(['text', 'template', 'image', 'video', 'document', 'audio'])
           .default('text')
           .describe('Message type. Defaults to "text".'),
-        text: z
-          .string()
-          .optional()
-          .describe('Message body for "text", or the caption for a media type.'),
-        media_url: z
-          .string()
-          .url()
-          .optional()
-          .describe('Publicly reachable URL of the media file (required for media types).'),
+        text: z.string().optional().describe('Message body for "text", or the caption for a media type.'),
+        media_url: z.string().url().optional().describe('Publicly reachable URL of the media file (required for media types).'),
         filename: z.string().optional().describe('File name for a "document" send.'),
         template: templateSchema.optional(),
-        reply_to_message_id: z
-          .string()
-          .optional()
-          .describe('Optional id of a message in the same conversation to reply to.'),
+        reply_to_message_id: z.string().optional().describe('Optional id of a message in the same conversation to reply to.'),
       },
       annotations: { title: 'Send WhatsApp message', readOnlyHint: false, openWorldHint: true },
     },
-    handle(async (args) => jsonResult(await client.sendMessage(args))),
+    handle(async (args) => jsonResult(await client.sendMessage(args)))
   );
 
   server.registerTool(
@@ -72,7 +59,7 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
       },
       annotations: { title: 'Create contact', readOnlyHint: false, openWorldHint: true },
     },
-    handle(async (args) => jsonResult(await client.createContact(args))),
+    handle(async (args) => jsonResult(await client.createContact(args)))
   );
 
   server.registerTool(
@@ -90,6 +77,6 @@ export function registerWriteTools(server: McpServer, client: WacrmClient): void
       },
       annotations: { title: 'Update contact', readOnlyHint: false, openWorldHint: true },
     },
-    handle(async ({ id, ...body }) => jsonResult(await client.updateContact(id, body))),
+    handle(async ({ id, ...body }) => jsonResult(await client.updateContact(id, body)))
   );
 }

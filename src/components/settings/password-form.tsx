@@ -1,22 +1,15 @@
 'use client';
 
+import { KeyRound, Loader2 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, KeyRound } from 'lucide-react';
-
-import { createClient } from '@/lib/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import { useTranslations } from 'next-intl';
+import { useAuth } from '@/hooks/use-auth';
+import { createClient } from '@/lib/supabase/client';
 
 const MIN_PASSWORD = 8;
 
@@ -89,9 +82,7 @@ export function PasswordForm() {
           <KeyRound className="size-4 text-primary" />
           {t('passwordTitle')}
         </CardTitle>
-        <CardDescription className="text-muted-foreground">
-          {t('passwordDesc', { min: MIN_PASSWORD })}
-        </CardDescription>
+        <CardDescription className="text-muted-foreground">{t('passwordDesc', { min: MIN_PASSWORD })}</CardDescription>
       </CardHeader>
 
       <CardContent>
@@ -145,16 +136,11 @@ export function PasswordForm() {
           </div>
 
           {confirmError && (
-            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-              {confirmError}
-            </p>
+            <p className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive text-xs">{confirmError}</p>
           )}
 
           <div className="flex justify-end">
-            <Button
-              type="submit"
-              disabled={saving || !current || !next || !confirm}
-            >
+            <Button type="submit" disabled={saving || !current || !next || !confirm}>
               {saving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />

@@ -50,9 +50,7 @@ export async function resolveContactIdentity(
   const phoneNormalized = normalizeKey(input.phone);
   if (!phoneNormalized) throw new ContactIdentityError('Phone is required');
 
-  const resolveExisting = async (): Promise<
-    ContactIdentityResult | null | undefined
-  > => {
+  const resolveExisting = async (): Promise<ContactIdentityResult | null | undefined> => {
     const { data, error } = await db
       .from('contacts')
       .select('*')
@@ -76,13 +74,8 @@ export async function resolveContactIdentity(
         .filter(([, value]) => typeof value === 'string' && value.trim() !== '')
     );
     const changes = { archived_at: null, ...fields };
-    const { error: restoreError } = await db
-      .from('contacts')
-      .update(changes)
-      .eq('id', contact.id)
-      .eq('account_id', input.accountId);
-    if (restoreError)
-      throw new ContactIdentityError('Failed to restore contact');
+    const { error: restoreError } = await db.from('contacts').update(changes).eq('id', contact.id).eq('account_id', input.accountId);
+    if (restoreError) throw new ContactIdentityError('Failed to restore contact');
 
     await addTags(db, contact.id, input.tagIds);
     return {
@@ -155,15 +148,9 @@ function nonEmpty(value: string | null | undefined): string | undefined {
   return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
-async function addTags(
-  db: SupabaseClient,
-  contactId: string,
-  tagIds: string[] | undefined
-): Promise<void> {
+async function addTags(db: SupabaseClient, contactId: string, tagIds: string[] | undefined): Promise<void> {
   for (const tagId of new Set(tagIds ?? [])) {
-    const { error } = await db
-      .from('contact_tags')
-      .insert({ contact_id: contactId, tag_id: tagId });
+    const { error } = await db.from('contact_tags').insert({ contact_id: contactId, tag_id: tagId });
     if (error && !isUniqueViolation(error)) {
       throw new ContactIdentityError('Failed to add contact tag');
     }

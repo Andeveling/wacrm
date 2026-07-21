@@ -7,16 +7,11 @@
 // an encrypted copy and can never show it again.
 // ============================================================
 
+import { fail, ok, okList, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { requireApiKey } from '@/lib/auth/api-context';
-import { ok, okList, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
-import { encrypt } from '@/lib/whatsapp/encryption';
+import { generateWebhookSecret, normalizeWebhookUrl, serializeWebhookEndpoint, WEBHOOK_PUBLIC_COLUMNS } from '@/lib/webhooks/endpoints';
 import { normalizeEvents } from '@/lib/webhooks/events';
-import {
-  WEBHOOK_PUBLIC_COLUMNS,
-  serializeWebhookEndpoint,
-  generateWebhookSecret,
-  normalizeWebhookUrl,
-} from '@/lib/webhooks/endpoints';
+import { encrypt } from '@/lib/whatsapp/encryption';
 
 export async function GET(request: Request) {
   try {
@@ -36,9 +31,7 @@ export async function GET(request: Request) {
     // The roster is small and settings-class — return it whole (the
     // list envelope's cursor is always null here).
     return okList(
-      (data ?? []).map((r) =>
-        serializeWebhookEndpoint(r as Record<string, unknown>)
-      ),
+      (data ?? []).map((r) => serializeWebhookEndpoint(r as Record<string, unknown>)),
       null
     );
   } catch (err) {
@@ -50,10 +43,7 @@ export async function POST(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'webhooks:manage');
 
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') {
       return fail('bad_request', 'Request body must be a JSON object', 400);
     }
@@ -65,11 +55,7 @@ export async function POST(request: Request) {
 
     const events = normalizeEvents(body.events);
     if (!events) {
-      return fail(
-        'bad_request',
-        "'events' must be a non-empty array of known event names",
-        400
-      );
+      return fail('bad_request', "'events' must be a non-empty array of known event names", 400);
     }
 
     const secret = generateWebhookSecret();
@@ -92,10 +78,7 @@ export async function POST(request: Request) {
     }
 
     // Secret shown exactly once.
-    return ok(
-      { ...serializeWebhookEndpoint(created as Record<string, unknown>), secret },
-      201
-    );
+    return ok({ ...serializeWebhookEndpoint(created as Record<string, unknown>), secret }, 201);
   } catch (err) {
     return toApiErrorResponse(err);
   }

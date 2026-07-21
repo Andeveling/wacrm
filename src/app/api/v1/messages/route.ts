@@ -31,24 +31,17 @@
 //               "contact_id", "contact_created" } }
 // ============================================================
 
+import { fail, ok, toApiErrorResponse } from '@/lib/api/v1/respond';
 import { requireApiKey } from '@/lib/auth/api-context';
-import { ok, fail, toApiErrorResponse } from '@/lib/api/v1/respond';
-import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation';
-import {
-  sendMessageToConversation,
-  validateSendMessageParams,
-  SendMessageError,
-} from '@/lib/whatsapp/send-message';
 import type { InteractiveMessagePayload } from '@/lib/whatsapp/interactive';
+import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation';
+import { SendMessageError, sendMessageToConversation, validateSendMessageParams } from '@/lib/whatsapp/send-message';
 
 export async function POST(request: Request) {
   try {
     const ctx = await requireApiKey(request, 'messages:send');
 
-    const body = (await request.json().catch(() => null)) as Record<
-      string,
-      unknown
-    > | null;
+    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
     if (!body || typeof body !== 'object') {
       return fail('bad_request', 'Request body must be a JSON object', 400);
     }
@@ -63,19 +56,11 @@ export async function POST(request: Request) {
     // Unpack the optional `template` object into the flat params the
     // send core expects. `params` as an array → legacy positional body
     // params; as an object → structured header/body/button params.
-    const template =
-      body.template && typeof body.template === 'object'
-        ? (body.template as Record<string, unknown>)
-        : null;
+    const template = body.template && typeof body.template === 'object' ? (body.template as Record<string, unknown>) : null;
     const templateParams = Array.isArray(template?.params)
-      ? (template.params as unknown[]).filter(
-          (p): p is string => typeof p === 'string'
-        )
+      ? (template.params as unknown[]).filter((p): p is string => typeof p === 'string')
       : undefined;
-    const templateMessageParams =
-      template?.params && !Array.isArray(template.params)
-        ? template.params
-        : undefined;
+    const templateMessageParams = template?.params && !Array.isArray(template.params) ? template.params : undefined;
 
     // Validate the message shape BEFORE resolveConversationByPhone
     // finds-or-creates a contact + conversation, so a bad payload 400s
@@ -98,34 +83,21 @@ export async function POST(request: Request) {
     // Find-or-create the conversation for this phone, then send. Both
     // steps share `SendMessageError`, so one catch maps the whole
     // pipeline to the envelope.
-    const resolved = await resolveConversationByPhone(
-      ctx.supabase,
-      ctx.accountId,
-      to,
-      typeof body.name === 'string' ? body.name : null
-    );
+    const resolved = await resolveConversationByPhone(ctx.supabase, ctx.accountId, to, typeof body.name === 'string' ? body.name : null);
 
-    const result = await sendMessageToConversation(
-      ctx.supabase,
-      ctx.accountId,
-      {
-        conversationId: resolved.conversationId,
-        messageType: type,
-        contentText: typeof body.text === 'string' ? body.text : null,
-        mediaUrl: typeof body.media_url === 'string' ? body.media_url : null,
-        filename: typeof body.filename === 'string' ? body.filename : null,
-        templateName: typeof template?.name === 'string' ? template.name : null,
-        templateLanguage:
-          typeof template?.language === 'string' ? template.language : null,
-        templateParams,
-        templateMessageParams,
-        interactivePayload,
-        replyToMessageId:
-          typeof body.reply_to_message_id === 'string'
-            ? body.reply_to_message_id
-            : null,
-      }
-    );
+    const result = await sendMessageToConversation(ctx.supabase, ctx.accountId, {
+      conversationId: resolved.conversationId,
+      messageType: type,
+      contentText: typeof body.text === 'string' ? body.text : null,
+      mediaUrl: typeof body.media_url === 'string' ? body.media_url : null,
+      filename: typeof body.filename === 'string' ? body.filename : null,
+      templateName: typeof template?.name === 'string' ? template.name : null,
+      templateLanguage: typeof template?.language === 'string' ? template.language : null,
+      templateParams,
+      templateMessageParams,
+      interactivePayload,
+      replyToMessageId: typeof body.reply_to_message_id === 'string' ? body.reply_to_message_id : null,
+    });
 
     return ok(
       {

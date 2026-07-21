@@ -22,35 +22,15 @@
 // this page after email verification.
 // ============================================================
 
-import { useCallback, useEffect, useState } from 'react';
+import { AlertTriangle, CheckCircle, Loader2, MailX, ShieldCheck, UsersRound } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import {
-  AlertTriangle,
-  CheckCircle,
-  Loader2,
-  MailX,
-  ShieldCheck,
-  UsersRound,
-} from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
 
 interface PeekOk {
@@ -99,7 +79,7 @@ export default function JoinPage() {
   // route group, so it doesn't reach this page. We hit Supabase
   // directly the same way `/login` and `/signup` do.
   const [authedUserId, setAuthedUserId] = useState<string | null | undefined>(
-    undefined, // undefined = unknown / still loading; null = signed out
+    undefined // undefined = unknown / still loading; null = signed out
   );
   const [accepting, setAccepting] = useState(false);
   // `redeem_invitation` returns 409 when the caller's current account
@@ -167,10 +147,7 @@ export default function JoinPage() {
     if (!token) return;
     setAccepting(true);
     try {
-      const res = await fetch(
-        `/api/invitations/${encodeURIComponent(token)}/redeem`,
-        { method: 'POST' },
-      );
+      const res = await fetch(`/api/invitations/${encodeURIComponent(token)}/redeem`, { method: 'POST' });
       if (!res.ok) {
         const payload = (await res.json().catch(() => ({}))) as {
           error?: string;
@@ -181,10 +158,7 @@ export default function JoinPage() {
         // a clear next-action (sign out → use different email)
         // rather than a 3-second toast.
         if (res.status === 409) {
-          setConflictMessage(
-            payload.error ||
-              'You are already in another account. Sign in with a different email to join this one.',
-          );
+          setConflictMessage(payload.error || 'You are already in another account. Sign in with a different email to join this one.');
         } else {
           toast.error(payload.error || 'Failed to accept invitation');
         }
@@ -223,7 +197,7 @@ export default function JoinPage() {
       <Card className="w-full max-w-md border-border bg-card">
         <CardContent className="flex flex-col items-center gap-3 py-12">
           <Loader2 className="size-6 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Verifying invitation…</p>
+          <p className="text-muted-foreground text-sm">Verifying invitation…</p>
         </CardContent>
       </Card>
     );
@@ -238,10 +212,8 @@ export default function JoinPage() {
           <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-red-500/10">
             <MailX className="h-6 w-6 text-red-400" />
           </div>
-          <CardTitle className="text-xl text-foreground">{copy.title}</CardTitle>
-          <CardDescription className="text-muted-foreground">
-            {copy.body}
-          </CardDescription>
+          <CardTitle className="text-foreground text-xl">{copy.title}</CardTitle>
+          <CardDescription className="text-muted-foreground">{copy.body}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
           {/* For server_error the failure is transient — the network
@@ -253,17 +225,11 @@ export default function JoinPage() {
               signup/sign-in escape hatches. */}
           {peek.reason === 'server_error' ? (
             <>
-              <Button
-                onClick={loadPeekAndAuth}
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              >
+              <Button onClick={loadPeekAndAuth} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
                 Try again
               </Button>
               <Link href="/signup">
-                <Button
-                  variant="outline"
-                  className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
+                <Button variant="outline" className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground">
                   Create a new account instead
                 </Button>
               </Link>
@@ -271,15 +237,10 @@ export default function JoinPage() {
           ) : (
             <>
               <Link href="/signup">
-                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-                  Create a new account instead
-                </Button>
+                <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">Create a new account instead</Button>
               </Link>
               <Link href="/login">
-                <Button
-                  variant="outline"
-                  className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                >
+                <Button variant="outline" className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground">
                   Sign in
                 </Button>
               </Link>
@@ -296,9 +257,8 @@ export default function JoinPage() {
       <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
         <UsersRound className="h-6 w-6 text-primary" />
       </div>
-      <CardTitle className="text-xl text-foreground">
-        You&apos;re invited to{' '}
-        <span className="text-primary">{peek.account_name}</span>
+      <CardTitle className="text-foreground text-xl">
+        You&apos;re invited to <span className="text-primary">{peek.account_name}</span>
       </CardTitle>
       <CardDescription className="text-muted-foreground">
         You&apos;ll join as{' '}
@@ -324,11 +284,7 @@ export default function JoinPage() {
         <Card className="w-full max-w-md border-border bg-card">
           {inviteHeader}
           <CardContent className="flex flex-col gap-3">
-            <Button
-              onClick={handleAccept}
-              disabled={accepting}
-              className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-            >
+            <Button onClick={handleAccept} disabled={accepting} className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
               {accepting ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
@@ -341,10 +297,9 @@ export default function JoinPage() {
                 </>
               )}
             </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Accepting moves your login into{' '}
-              <span className="text-muted-foreground">{peek.account_name}</span>. Your
-              empty personal account from signup will be cleaned up.
+            <p className="text-center text-muted-foreground text-xs">
+              Accepting moves your login into <span className="text-muted-foreground">{peek.account_name}</span>. Your empty personal
+              account from signup will be cleaned up.
             </p>
           </CardContent>
         </Card>
@@ -359,26 +314,21 @@ export default function JoinPage() {
             if (!open) setConflictMessage(null);
           }}
         >
-          <DialogContent className="bg-popover border-border sm:max-w-md">
+          <DialogContent className="border-border bg-popover sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-popover-foreground">
                 <AlertTriangle className="size-4 text-amber-400" />
                 Can&apos;t join {peek.account_name} with this account
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                {conflictMessage}
-              </DialogDescription>
+              <DialogDescription className="text-muted-foreground">{conflictMessage}</DialogDescription>
             </DialogHeader>
-            <div className="space-y-2 py-2 text-xs text-muted-foreground">
+            <div className="space-y-2 py-2 text-muted-foreground text-xs">
               <p>
-                To join{' '}
-                <span className="text-popover-foreground">{peek.account_name}</span>,
-                sign out and sign up again with a different email address.
-                The invite link stays valid as long as it hasn&apos;t
-                expired.
+                To join <span className="text-popover-foreground">{peek.account_name}</span>, sign out and sign up again with a different
+                email address. The invite link stays valid as long as it hasn&apos;t expired.
               </p>
             </div>
-            <DialogFooter className="bg-popover border-border">
+            <DialogFooter className="border-border bg-popover">
               <Button
                 variant="outline"
                 onClick={() => setConflictMessage(null)}
@@ -408,20 +358,17 @@ export default function JoinPage() {
   }
 
   // ----- Not authed: prompt to sign up or sign in -----
+  // `peek.ok` above guarantees `token` is defined; narrow for TS.
+  const safeToken = token as string;
   return (
     <Card className="w-full max-w-md border-border bg-card">
       {inviteHeader}
       <CardContent className="flex flex-col gap-2">
-        <Link href={`/signup?invite=${encodeURIComponent(token!)}`}>
-          <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
-            Create account &amp; join
-          </Button>
+        <Link href={`/signup?invite=${encodeURIComponent(safeToken)}`}>
+          <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">Create account &amp; join</Button>
         </Link>
-        <Link href={`/login?invite=${encodeURIComponent(token!)}`}>
-          <Button
-            variant="outline"
-            className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
+        <Link href={`/login?invite=${encodeURIComponent(safeToken)}`}>
+          <Button variant="outline" className="w-full border-border text-muted-foreground hover:bg-muted hover:text-foreground">
             I already have an account
           </Button>
         </Link>

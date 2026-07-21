@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  NODE_CATEGORIES,
-  NODE_META,
-  groupNodeTypesByCategory,
-  type NodeType,
-} from './shared';
+import { groupNodeTypesByCategory, NODE_CATEGORIES, NODE_META, type NodeType } from './shared';
 
 const ALL_TYPES = Object.keys(NODE_META) as NodeType[];
 
@@ -26,17 +21,9 @@ describe('groupNodeTypesByCategory', () => {
   });
 
   it('preserves the input order within a category', () => {
-    const groups = groupNodeTypesByCategory([
-      'send_media',
-      'send_message',
-      'send_buttons',
-    ]);
+    const groups = groupNodeTypesByCategory(['send_media', 'send_message', 'send_buttons']);
     expect(groups).toHaveLength(1);
-    expect(groups[0].types).toEqual([
-      'send_media',
-      'send_message',
-      'send_buttons',
-    ]);
+    expect(groups[0].types).toEqual(['send_media', 'send_message', 'send_buttons']);
   });
 
   it('partitions the full type list without losing or duplicating a type', () => {

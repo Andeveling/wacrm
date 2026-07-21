@@ -1,10 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import {
-  WEBHOOK_EVENTS,
-  WEBHOOK_EVENT_DESCRIPTIONS,
-  isWebhookEvent,
-  normalizeEvents,
-} from './events';
+import { describe, expect, it } from 'vitest';
+import { isWebhookEvent, normalizeEvents, WEBHOOK_EVENT_DESCRIPTIONS, WEBHOOK_EVENTS } from './events';
 
 describe('isWebhookEvent', () => {
   it('accepts every declared event and rejects others', () => {
@@ -24,9 +19,10 @@ describe('every event has a description', () => {
 
 describe('normalizeEvents', () => {
   it('de-duplicates a valid list', () => {
-    expect(
-      normalizeEvents(['message.received', 'message.received', 'conversation.created'])
-    ).toEqual(['message.received', 'conversation.created']);
+    expect(normalizeEvents(['message.received', 'message.received', 'conversation.created'])).toEqual([
+      'message.received',
+      'conversation.created',
+    ]);
   });
 
   it('rejects an unknown event', () => {
