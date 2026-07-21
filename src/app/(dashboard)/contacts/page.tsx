@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { toast } from 'sonner';
-import type { Contact, Tag, ContactTag } from '@/types';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import type { Contact, Tag, ContactTag } from "@/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -13,19 +13,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
+} from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/components/ui/popover';
+} from "@/components/ui/popover";
 import {
   Search,
   Plus,
@@ -41,15 +41,15 @@ import {
   SlidersHorizontal,
   Filter,
   X,
-} from 'lucide-react';
-import { ContactForm } from '@/components/contacts/contact-form';
-import { ContactDetailView } from '@/components/contacts/contact-detail-view';
-import { ImportModal } from '@/components/contacts/import-modal';
-import { CustomFieldsManager } from '@/components/contacts/custom-fields-manager';
-import { useCan } from '@/hooks/use-can';
-import { GatedButton } from '@/components/ui/gated-button';
-import { useTranslations } from 'next-intl';
-import { updateContactLifecycle } from './actions';
+} from "lucide-react";
+import { ContactForm } from "@/components/contacts/contact-form";
+import { ContactDetailView } from "@/components/contacts/contact-detail-view";
+import { ImportModal } from "@/components/contacts/import-modal";
+import { CustomFieldsManager } from "@/components/contacts/custom-fields-manager";
+import { useCan } from "@/hooks/use-can";
+import { GatedButton } from "@/components/ui/gated-button";
+import { useTranslations } from "next-intl";
+import { updateContactLifecycle } from "./actions";
 
 const PAGE_SIZE = 25;
 
@@ -58,17 +58,17 @@ interface ContactWithTags extends Contact {
 }
 
 export default function ContactsPage() {
-  const t = useTranslations('Contacts.page');
+  const t = useTranslations("Contacts.page");
   const supabase = createClient();
-  const canEdit = useCan('send-messages');
-  const canEditSettings = useCan('edit-settings');
+  const canEdit = useCan("send-messages");
+  const canEditSettings = useCan("edit-settings");
 
   const [contacts, setContacts] = useState<ContactWithTags[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [status, setStatus] = useState<'active' | 'archived'>('active');
+  const [status, setStatus] = useState<"active" | "archived">("active");
   // Tag filter — contacts shown must have ANY of these tags (OR).
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
@@ -94,7 +94,7 @@ export default function ContactsPage() {
   const fetchSeq = useRef(0);
 
   const fetchTags = useCallback(async () => {
-    const { data } = await supabase.from('tags').select('*');
+    const { data } = await supabase.from("tags").select("*");
     if (data) {
       const map: Record<string, Tag> = {};
       data.forEach((t) => (map[t.id] = t));
@@ -128,7 +128,7 @@ export default function ContactsPage() {
       // windowed total count + pagination) so a tag covering many
       // contacts can't silently truncate the result or overflow an IN
       // clause. See migration 025_filter_contacts_by_tags.
-      const { data, error } = await supabase.rpc('filter_contacts_by_tags', {
+      const { data, error } = await supabase.rpc("filter_contacts_by_tags", {
         p_tag_ids: selectedTagIds,
         p_search: term || null,
         p_limit: PAGE_SIZE,
@@ -137,7 +137,7 @@ export default function ContactsPage() {
       });
       if (seq !== fetchSeq.current) return; // superseded by a newer fetch
       if (error) {
-        toast.error(t('toastFailedLoad'));
+        toast.error(t("toastFailedLoad"));
         setLoading(false);
         return;
       }
@@ -146,24 +146,27 @@ export default function ContactsPage() {
       count = rows.length > 0 ? Number(rows[0].total_count) : 0;
     } else {
       let query = supabase
-        .from('contacts')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
+        .from("contacts")
+        .select("*", { count: "exact" })
+        .order("created_at", { ascending: false })
         .range(from, to);
 
-      query = status === 'active'
-        ? query.is('archived_at', null)
-        : query.not('archived_at', 'is', null);
+      query =
+        status === "active"
+          ? query.is("archived_at", null)
+          : query.not("archived_at", "is", null);
 
       if (term) {
         const like = `%${term}%`;
-        query = query.or(`name.ilike.${like},phone.ilike.${like},email.ilike.${like}`);
+        query = query.or(
+          `name.ilike.${like},phone.ilike.${like},email.ilike.${like}`,
+        );
       }
 
       const { data, count: exactCount, error } = await query;
       if (seq !== fetchSeq.current) return; // superseded by a newer fetch
       if (error) {
-        toast.error(t('toastFailedLoad'));
+        toast.error(t("toastFailedLoad"));
         setLoading(false);
         return;
       }
@@ -182,9 +185,9 @@ export default function ContactsPage() {
     // Fetch tags for these contacts
     const contactIds = contactRows.map((c) => c.id);
     const { data: contactTags } = await supabase
-      .from('contact_tags')
-      .select('contact_id, tag_id')
-      .in('contact_id', contactIds);
+      .from("contact_tags")
+      .select("contact_id, tag_id")
+      .in("contact_id", contactIds);
     if (seq !== fetchSeq.current) return; // superseded by a newer fetch
 
     const tagsByContact: Record<string, string[]> = {};
@@ -226,9 +229,9 @@ export default function ContactsPage() {
 
   async function openEditForm(contact: Contact) {
     const { data } = await supabase
-      .from('contact_tags')
-      .select('*')
-      .eq('contact_id', contact.id);
+      .from("contact_tags")
+      .select("*")
+      .eq("contact_id", contact.id);
     setEditContact(contact);
     setEditContactTags(data ?? []);
     setFormOpen(true);
@@ -264,45 +267,56 @@ export default function ContactsPage() {
     });
   }
 
-  async function updateLifecycle(action: 'archive' | 'restore', ids: string[]) {
+  async function updateLifecycle(action: "archive" | "restore", ids: string[]) {
     const visibleIds = new Set(contacts.map((contact) => contact.id));
     const targetIds = ids.filter((id) => visibleIds.has(id));
     if (targetIds.length === 0) return;
 
-    const removed = contacts.filter((contact) => targetIds.includes(contact.id));
-    setContacts((current) => current.filter((contact) => !targetIds.includes(contact.id)));
+    const removed = contacts.filter((contact) =>
+      targetIds.includes(contact.id),
+    );
+    setContacts((current) =>
+      current.filter((contact) => !targetIds.includes(contact.id)),
+    );
     setSelected(new Set());
     setTotalCount((count) => Math.max(0, count - targetIds.length));
 
     const result = await updateContactLifecycle(action, targetIds);
     if (!result.ok) {
-      setContacts((current) => [...removed, ...current].sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      ));
+      setContacts((current) =>
+        [...removed, ...current].sort(
+          (a, b) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        ),
+      );
       setTotalCount((count) => count + targetIds.length);
-      toast.error(t('toastLifecycleFailed'));
+      toast.error(t("toastLifecycleFailed"));
       return;
     }
 
-    if (action === 'archive') {
-      toast.success(t('toastArchived', { count: targetIds.length }), {
+    if (action === "archive") {
+      toast.success(t("toastArchived", { count: targetIds.length }), {
         action: {
-          label: t('undo'),
+          label: t("undo"),
           onClick: async () => {
-            const restored = await updateContactLifecycle('restore', targetIds);
+            const restored = await updateContactLifecycle("restore", targetIds);
             if (!restored.ok) {
-              toast.error(t('toastLifecycleFailed'));
+              toast.error(t("toastLifecycleFailed"));
               return;
             }
-            setContacts((current) => [...removed, ...current].sort(
-              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            ));
+            setContacts((current) =>
+              [...removed, ...current].sort(
+                (a, b) =>
+                  new Date(b.created_at).getTime() -
+                  new Date(a.created_at).getTime(),
+              ),
+            );
             setTotalCount((count) => count + targetIds.length);
           },
         },
       });
     } else {
-      toast.success(t('toastRestored', { count: targetIds.length }));
+      toast.success(t("toastRestored", { count: targetIds.length }));
     }
   }
 
@@ -313,15 +327,16 @@ export default function ContactsPage() {
   // Tag filter helpers. Every change resets to page 0 — the result set
   // shrinks/grows so page N may no longer be valid (mirrors the search box).
   const allTags = Object.values(tagsMap).sort((a, b) =>
-    a.name.localeCompare(b.name)
+    a.name.localeCompare(b.name),
   );
-  const hasActiveFilters = search.trim().length > 0 || selectedTagIds.length > 0;
+  const hasActiveFilters =
+    search.trim().length > 0 || selectedTagIds.length > 0;
 
   function toggleTagFilter(tagId: string) {
     setSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
+        : [...prev, tagId],
     );
     setPage(0);
   }
@@ -336,9 +351,11 @@ export default function ContactsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{t('title')}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("title")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {totalCount > 0 ? t('subtitle', { count: totalCount }) : t('subtitleZero')}
+            {totalCount > 0
+              ? t("subtitle", { count: totalCount })
+              : t("subtitleZero")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -349,7 +366,7 @@ export default function ContactsPage() {
               className="border-border text-muted-foreground hover:bg-muted"
             >
               <SlidersHorizontal className="size-4" />
-              {t('customFieldsBtn')}
+              {t("customFieldsBtn")}
             </Button>
           )}
           <GatedButton
@@ -360,7 +377,7 @@ export default function ContactsPage() {
             className="border-border text-muted-foreground hover:bg-muted"
           >
             <Upload className="size-4" />
-            {t('importBtn')}
+            {t("importBtn")}
           </GatedButton>
           <GatedButton
             canAct={canEdit}
@@ -369,7 +386,7 @@ export default function ContactsPage() {
             className="bg-primary hover:bg-primary/90 text-primary-foreground"
           >
             <Plus className="size-4" />
-            {t('addContactBtn')}
+            {t("addContactBtn")}
           </GatedButton>
         </div>
       </div>
@@ -377,10 +394,10 @@ export default function ContactsPage() {
       {/* Search + tag filter */}
       <div className="space-y-2">
         <div className="flex gap-2">
-          {(['active', 'archived'] as const).map((nextStatus) => (
+          {(["active", "archived"] as const).map((nextStatus) => (
             <Button
               key={nextStatus}
-              variant={status === nextStatus ? 'default' : 'outline'}
+              variant={status === nextStatus ? "default" : "outline"}
               size="sm"
               onClick={() => {
                 setStatus(nextStatus);
@@ -402,7 +419,7 @@ export default function ContactsPage() {
                 // set shrinks/grows, page N may no longer be valid.
                 setPage(0);
               }}
-              placeholder={t('searchPlaceholder')}
+              placeholder={t("searchPlaceholder")}
               className="pl-8 bg-card border-border text-foreground placeholder:text-muted-foreground"
             />
           </div>
@@ -417,7 +434,7 @@ export default function ContactsPage() {
               }
             >
               <Filter className="size-4" />
-              {t('filterByTags')}
+              {t("filterByTags")}
               {selectedTagIds.length > 0 && (
                 <span className="ml-1 inline-flex items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-semibold text-primary-foreground">
                   {selectedTagIds.length}
@@ -427,20 +444,20 @@ export default function ContactsPage() {
             <PopoverContent align="start" className="w-64 p-0">
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <span className="text-sm font-medium text-popover-foreground">
-                  {t('filterByTags')}
+                  {t("filterByTags")}
                 </span>
                 {selectedTagIds.length > 0 && (
                   <button
                     onClick={clearTagFilters}
                     className="text-xs text-muted-foreground hover:text-foreground"
                   >
-                    {t('clearAll')}
+                    {t("clearAll")}
                   </button>
                 )}
               </div>
               {allTags.length === 0 ? (
                 <p className="px-3 py-4 text-sm text-muted-foreground text-center">
-                  {t('noTagsYet')}
+                  {t("noTagsYet")}
                 </p>
               ) : (
                 <div className="max-h-64 overflow-y-auto py-1">
@@ -480,7 +497,7 @@ export default function ContactsPage() {
                   key={id}
                   className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
                   style={{
-                    backgroundColor: tag.color + '20',
+                    backgroundColor: tag.color + "20",
                     color: tag.color,
                   }}
                 >
@@ -499,7 +516,7 @@ export default function ContactsPage() {
               onClick={clearTagFilters}
               className="text-xs text-muted-foreground hover:text-foreground px-1"
             >
-              {t('clearAll')}
+              {t("clearAll")}
             </button>
           </div>
         )}
@@ -509,7 +526,7 @@ export default function ContactsPage() {
       {selected.size > 0 && (
         <div className="flex items-center justify-between gap-4 rounded-lg border border-border bg-muted/40 px-4 py-2">
           <p className="text-sm text-foreground">
-            {t('selectedCount', { count: selected.size })}
+            {t("selectedCount", { count: selected.size })}
           </p>
           <div className="flex items-center gap-2">
             <Button
@@ -518,17 +535,25 @@ export default function ContactsPage() {
               onClick={() => setSelected(new Set())}
               className="text-muted-foreground hover:text-foreground"
             >
-              {t('clearSelection')}
+              {t("clearSelection")}
             </Button>
             <GatedButton
-              variant={status === 'active' ? 'destructive' : 'outline'}
+              variant={status === "active" ? "destructive" : "outline"}
               size="sm"
               canAct={canEdit}
               gateReason={`${status} contacts`}
-              onClick={() => updateLifecycle(status === 'active' ? 'archive' : 'restore', [...selected])}
+              onClick={() =>
+                updateLifecycle(status === "active" ? "archive" : "restore", [
+                  ...selected,
+                ])
+              }
             >
-              {status === 'active' ? <Archive className="size-4" /> : <RotateCcw className="size-4" />}
-              {t(status === 'active' ? 'archiveSelected' : 'restoreSelected')}
+              {status === "active" ? (
+                <Archive className="size-4" />
+              ) : (
+                <RotateCcw className="size-4" />
+              )}
+              {t(status === "active" ? "archiveSelected" : "restoreSelected")}
             </GatedButton>
           </div>
         </div>
@@ -548,12 +573,24 @@ export default function ContactsPage() {
                   aria-label="Select all contacts on this page"
                 />
               </TableHead>
-              <TableHead className="text-muted-foreground">{t('tableColumns.name')}</TableHead>
-              <TableHead className="text-muted-foreground">{t('tableColumns.phone')}</TableHead>
-              <TableHead className="text-muted-foreground hidden md:table-cell">{t('tableColumns.email')}</TableHead>
-              <TableHead className="text-muted-foreground hidden lg:table-cell">{t('tableColumns.company')}</TableHead>
-              <TableHead className="text-muted-foreground hidden md:table-cell">{t('tableColumns.tags')}</TableHead>
-              <TableHead className="text-muted-foreground hidden lg:table-cell">{t('tableColumns.createdAt')}</TableHead>
+              <TableHead className="text-muted-foreground">
+                {t("tableColumns.name")}
+              </TableHead>
+              <TableHead className="text-muted-foreground">
+                {t("tableColumns.phone")}
+              </TableHead>
+              <TableHead className="text-muted-foreground hidden md:table-cell">
+                {t("tableColumns.email")}
+              </TableHead>
+              <TableHead className="text-muted-foreground hidden lg:table-cell">
+                {t("tableColumns.company")}
+              </TableHead>
+              <TableHead className="text-muted-foreground hidden md:table-cell">
+                {t("tableColumns.tags")}
+              </TableHead>
+              <TableHead className="text-muted-foreground hidden lg:table-cell">
+                {t("tableColumns.createdAt")}
+              </TableHead>
               <TableHead className="text-muted-foreground w-12" />
             </TableRow>
           </TableHeader>
@@ -563,7 +600,9 @@ export default function ContactsPage() {
                 <TableCell colSpan={8} className="text-center py-12">
                   <div className="flex flex-col items-center gap-2">
                     <Loader2 className="size-6 animate-spin text-primary" />
-                    <p className="text-sm text-muted-foreground">{t('loading')}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("loading")}
+                    </p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -574,8 +613,8 @@ export default function ContactsPage() {
                     <Users className="size-8 text-muted-foreground" />
                     <p className="text-sm text-muted-foreground">
                       {hasActiveFilters
-                        ? t('noContactsMatch')
-                        : t('noContactsYet')}
+                        ? t("noContactsMatch")
+                        : t("noContactsYet")}
                     </p>
                     {!hasActiveFilters && (
                       <GatedButton
@@ -587,7 +626,7 @@ export default function ContactsPage() {
                         className="mt-2 border-border text-muted-foreground hover:bg-muted"
                       >
                         <Plus className="size-3.5" />
-                        {t('addFirstContact')}
+                        {t("addFirstContact")}
                       </GatedButton>
                     )}
                   </div>
@@ -608,16 +647,24 @@ export default function ContactsPage() {
                     />
                   </TableCell>
                   <TableCell className="text-foreground font-medium">
-                    {contact.name || <span className="text-muted-foreground italic">{t('unnamed')}</span>}
+                    {contact.name || (
+                      <span className="text-muted-foreground italic">
+                        {t("unnamed")}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground font-mono text-xs">
                     {contact.phone}
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden md:table-cell text-sm">
-                    {contact.email || <span className="text-muted-foreground">-</span>}
+                    {contact.email || (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden lg:table-cell text-sm">
-                    {contact.company || <span className="text-muted-foreground">-</span>}
+                    {contact.company || (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
                     <div className="flex flex-wrap gap-1">
@@ -627,7 +674,7 @@ export default function ContactsPage() {
                             key={tag.id}
                             className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
                             style={{
-                              backgroundColor: tag.color + '20',
+                              backgroundColor: tag.color + "20",
                               color: tag.color,
                             }}
                           >
@@ -645,10 +692,10 @@ export default function ContactsPage() {
                     </div>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-xs hidden lg:table-cell">
-                    {new Date(contact.created_at).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
+                    {new Date(contact.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
                     })}
                   </TableCell>
                   <TableCell>
@@ -677,16 +724,27 @@ export default function ContactsPage() {
                           className="text-popover-foreground focus:bg-muted focus:text-foreground"
                         >
                           <Pencil className="size-4" />
-                          {t('editAction')}
+                          {t("editAction")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
-                            updateLifecycle(status === 'active' ? 'archive' : 'restore', [contact.id]);
+                            updateLifecycle(
+                              status === "active" ? "archive" : "restore",
+                              [contact.id],
+                            );
                           }}
                         >
-                          {status === 'active' ? <Archive className="size-4" /> : <RotateCcw className="size-4" />}
-                          {t(status === 'active' ? 'archiveAction' : 'restoreAction')}
+                          {status === "active" ? (
+                            <Archive className="size-4" />
+                          ) : (
+                            <RotateCcw className="size-4" />
+                          )}
+                          {t(
+                            status === "active"
+                              ? "archiveAction"
+                              : "restoreAction",
+                          )}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -702,10 +760,10 @@ export default function ContactsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-xs text-muted-foreground">
-            {t('showingPagination', {
+            {t("showingPagination", {
               start: page * PAGE_SIZE + 1,
               end: Math.min((page + 1) * PAGE_SIZE, totalCount),
-              total: totalCount
+              total: totalCount,
             })}
           </p>
           <div className="flex items-center gap-1">
@@ -719,7 +777,7 @@ export default function ContactsPage() {
               <ChevronLeft className="size-4" />
             </Button>
             <span className="text-xs text-muted-foreground px-2">
-              {t('pageCount', { page: page + 1, total: totalPages })}
+              {t("pageCount", { page: page + 1, total: totalPages })}
             </span>
             <Button
               variant="outline"
@@ -772,7 +830,6 @@ export default function ContactsPage() {
           onOpenChange={setCustomFieldsOpen}
         />
       )}
-
     </div>
   );
 }
