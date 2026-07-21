@@ -9,11 +9,11 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { Tag } from '@/types';
 
-import type { ContactStatus } from '../_hooks/use-contacts';
+import type { ContactListQuery } from '@/lib/contacts/contact-list-query';
 
 interface ContactsFiltersProps {
-  status: ContactStatus;
-  onStatusChange: (status: ContactStatus) => void;
+  status: ContactListQuery['status'];
+  onStatusChange: (status: ContactListQuery['status']) => void;
   search: string;
   onSearchChange: (value: string) => void;
   allTags: Tag[];

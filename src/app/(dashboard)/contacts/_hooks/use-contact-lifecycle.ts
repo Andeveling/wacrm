@@ -4,20 +4,22 @@ import { useTranslations } from 'next-intl';
 import { useCallback } from 'react';
 import { toast } from 'sonner';
 import { updateContactLifecycle } from '../_actions/actions';
-import type { ContactWithTags } from './use-contacts';
+import type { ContactListItem } from '@/lib/contacts/contact-list';
 
 interface UseContactLifecycleParams {
-  contacts: ContactWithTags[];
-  removeDisplayedContacts: (rows: ContactWithTags[]) => void;
-  restoreDisplayedContacts: (rows: ContactWithTags[]) => void;
+  contacts: ContactListItem[];
   clearSelectedContacts: () => void;
+  removeDisplayedContacts?: (rows: ContactListItem[]) => void;
+  restoreDisplayedContacts?: (rows: ContactListItem[]) => void;
+  onUpdated?: () => void;
 }
 
 export function useContactLifecycle({
   contacts,
+  clearSelectedContacts,
   removeDisplayedContacts,
   restoreDisplayedContacts,
-  clearSelectedContacts,
+  onUpdated,
 }: UseContactLifecycleParams) {
   const t = useTranslations('Contacts.page');
 
@@ -28,16 +30,18 @@ export function useContactLifecycle({
       if (visibleContactIds.length === 0) return;
 
       const contactsBeingUpdated = contacts.filter((contact) => visibleContactIds.includes(contact.id));
-
-      removeDisplayedContacts(contactsBeingUpdated);
+      removeDisplayedContacts?.(contactsBeingUpdated);
       clearSelectedContacts();
 
       const lifecycleUpdate = await updateContactLifecycle(action, visibleContactIds);
       if (!lifecycleUpdate.ok) {
-        restoreDisplayedContacts(contactsBeingUpdated);
+        const failedIds = new Set((lifecycleUpdate as { failedIds?: string[] }).failedIds ?? visibleContactIds);
+        restoreDisplayedContacts?.(contactsBeingUpdated.filter((contact) => failedIds.has(contact.id)));
         toast.error(t('toastLifecycleFailed'));
         return;
       }
+
+      onUpdated?.();
 
       if (action === 'archive') {
         toast.success(t('toastArchived', { count: visibleContactIds.length }), {
@@ -49,7 +53,8 @@ export function useContactLifecycle({
                 toast.error(t('toastLifecycleFailed'));
                 return;
               }
-              restoreDisplayedContacts(contactsBeingUpdated);
+              restoreDisplayedContacts?.(contactsBeingUpdated);
+              onUpdated?.();
             },
           },
         });
@@ -57,6 +62,6 @@ export function useContactLifecycle({
         toast.success(t('toastRestored', { count: visibleContactIds.length }));
       }
     },
-    [contacts, removeDisplayedContacts, restoreDisplayedContacts, clearSelectedContacts, t]
+    [contacts, clearSelectedContacts, removeDisplayedContacts, restoreDisplayedContacts, onUpdated, t]
   );
 }

@@ -5,12 +5,11 @@ import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { GatedButton } from '@/components/ui/gated-button';
-
-import type { ContactStatus } from '../_hooks/use-contacts';
+import type { ContactListQuery } from '@/lib/contacts/contact-list-query';
 
 interface ContactsBulkBarProps {
   count: number;
-  status: ContactStatus;
+  status: ContactListQuery['status'];
   canEdit: boolean;
   onClear: () => void;
   onArchiveOrRestore: () => void;

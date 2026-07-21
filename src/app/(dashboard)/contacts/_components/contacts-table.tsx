@@ -8,15 +8,15 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { GatedButton } from '@/components/ui/gated-button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import type { ContactListItem } from '@/lib/contacts/contact-list';
+import type { ContactListQuery } from '@/lib/contacts/contact-list-query';
 import type { Contact } from '@/types';
 
-import type { ContactStatus, ContactWithTags } from '../_hooks/use-contacts';
-
 interface ContactsTableProps {
-  contacts: ContactWithTags[];
+  contacts: ContactListItem[];
   loading: boolean;
   hasActiveFilters: boolean;
-  status: ContactStatus;
+  status: ContactListQuery['status'];
   selectedIds: Set<string>;
   canEdit: boolean;
   onSelectAll: () => void;
