@@ -42,6 +42,27 @@ describe('public contact lifecycle', () => {
     expect(await restored.json()).toEqual({ data: { id: 'contact-1', restored: true } });
   });
 
+  it('keeps repeated lifecycle operations successful', async () => {
+    const first = await DELETE(new Request('https://crm.test'), params);
+    const second = await DELETE(new Request('https://crm.test'), params);
+
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(await second.json()).toEqual({ data: { id: 'contact-1', archived: true } });
+  });
+
+  it('returns generic lifecycle errors for archive and restore failures', async () => {
+    rpc.mockResolvedValue({ error: new Error('database failure') });
+
+    const archived = await DELETE(new Request('https://crm.test'), params);
+    const restored = await POST(new Request('https://crm.test'), params);
+
+    expect(archived.status).toBe(500);
+    expect(restored.status).toBe(500);
+    expect(await archived.json()).toEqual({ error: { code: 'internal', message: 'Failed to archive contact' } });
+    expect(await restored.json()).toEqual({ error: { code: 'internal', message: 'Failed to restore contact' } });
+  });
+
   it('rejects ordinary updates to archived contacts', async () => {
     getContactById.mockResolvedValue({ id: 'contact-1', archived_at: '2026-07-20T00:00:00Z' });
 
