@@ -217,4 +217,24 @@ describe('resolveContactIdentity', () => {
     });
     expect(updates).toEqual([]);
   });
+
+  it('deduplicates repeated broadcast CSV phone numbers', async () => {
+    const active = {
+      id: 'active',
+      phone: '+14155550123',
+      archived_at: null,
+    };
+    const { db, inserts, updates } = makeDb({ contacts: [active] });
+
+    await expect(
+      resolveBroadcastCsvContacts(db, {
+        accountId: base.accountId,
+        auditUserId: base.auditUserId,
+        rows: [{ phone: '+1 (415) 555-0123' }, { phone: active.phone }],
+      })
+    ).resolves.toEqual({ archivedRowsExcluded: 0, contacts: [active] });
+
+    expect(inserts).toEqual([]);
+    expect(updates).toEqual([]);
+  });
 });
