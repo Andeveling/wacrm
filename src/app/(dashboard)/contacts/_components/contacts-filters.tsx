@@ -2,6 +2,7 @@
 
 import { Filter, Search, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,7 +15,7 @@ interface ContactsFiltersProps {
   status: ContactListQuery['status'];
   onStatusChange: (status: ContactListQuery['status']) => void;
   search: string;
-  onSearchChange: (value: string) => void;
+  onSearchSubmit: (value: string) => void;
   allTags: Tag[];
   selectedTagIds: string[];
   tagsById: Record<string, Tag>;
@@ -26,7 +27,7 @@ export function ContactsFilters({
   status,
   onStatusChange,
   search,
-  onSearchChange,
+  onSearchSubmit,
   allTags,
   selectedTagIds,
   tagsById,
@@ -34,6 +35,29 @@ export function ContactsFilters({
   onClearTags,
 }: ContactsFiltersProps) {
   const t = useTranslations('Contacts.page');
+
+  const [searchInput, setSearchInput] = useState(search);
+  const lastSubmittedSearch = useRef(search);
+  const submitSearch = useEffectEvent(onSearchSubmit);
+
+  /**
+   * Preserve newer keystrokes when our own navigation settles, but sync
+   * genuine external URL changes such as browser back/forward.
+   */
+  useEffect(() => {
+    if (search === lastSubmittedSearch.current) return;
+    lastSubmittedSearch.current = search;
+    setSearchInput(search);
+  }, [search]);
+
+  useEffect(() => {
+    if (searchInput === search) return;
+    const timer = setTimeout(() => {
+      lastSubmittedSearch.current = searchInput;
+      submitSearch(searchInput);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchInput, search]);
 
   return (
     <div className="space-y-2">
@@ -54,8 +78,8 @@ export function ContactsFilters({
         <div className="relative w-full max-w-sm">
           <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
             placeholder={t('searchPlaceholder')}
             className="border-border bg-card pl-8 text-foreground placeholder:text-muted-foreground"
           />

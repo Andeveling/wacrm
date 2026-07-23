@@ -44,7 +44,10 @@ export function ContactsPageClient({ view }: { view: ContactListView }) {
 
   const tagsById = Object.fromEntries(view.tagOptions.map((tag) => [tag.id, tag]));
 
-  function navigate(next: { search?: string; tagIds?: string[]; status?: 'active' | 'archived'; page?: number }) {
+  function navigate(
+    next: { search?: string; tagIds?: string[]; status?: 'active' | 'archived'; page?: number },
+    history: 'push' | 'replace' = 'push'
+  ) {
     selection.clearSelectedContacts();
     const params = new URLSearchParams(searchParams.toString());
     const search = next.search ?? view.query.search;
@@ -63,7 +66,7 @@ export function ContactsPageClient({ view }: { view: ContactListView }) {
     if (page > 1) params.set('page', String(page));
     else params.delete('page');
 
-    router.push(`${pathname}${params.size ? `?${params}` : ''}`);
+    router[history](`${pathname}${params.size ? `?${params}` : ''}`, { scroll: false });
   }
 
   const updateLifecycle = useContactLifecycle({
@@ -123,7 +126,7 @@ export function ContactsPageClient({ view }: { view: ContactListView }) {
         status={view.query.status}
         onStatusChange={(status) => navigate({ status, page: 1 })}
         search={view.query.search}
-        onSearchChange={(search) => navigate({ search, page: 1 })}
+        onSearchSubmit={(search) => navigate({ search, page: 1 }, 'replace')}
         allTags={view.tagOptions}
         selectedTagIds={view.query.tagIds}
         tagsById={tagsById as Record<string, Tag>}

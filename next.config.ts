@@ -69,6 +69,24 @@ const nextConfig: NextConfig = {
   },
 
   /**
+   * React Compiler — automatic memoization across the React tree.
+   *
+   * The compiler infers equivalence of values, callbacks, and JSX
+   * subtrees from JSX + closure capture, replacing the need for
+   * hand-written `useMemo` / `useCallback` / `React.memo` in app code.
+   * The repo's `react-19` skill codifies this: "NEVER: Manual
+   * memoization" unless profiling proves the compiler missed a
+   * specific hot path.
+   *
+   * Requires `babel-plugin-react-compiler` as a dev dependency — Next
+   * resolves it at config-load time even when Turbopack drives the
+   * transform. The Babel invocation happens during the SWC pipeline
+   * for source files outside Turbopack's Rust reach, so the package
+   * must be installed regardless of the bundler.
+   */
+  reactCompiler: true,
+
+  /**
    * Cross-origin dev access (Next.js 16).
    *
    * Next 16 blocks requests to dev-only resources (`/_next/*` internals,
